@@ -1,650 +1,890 @@
 # $Model\space Ⅱ$
-	Model II 的轴向和径向传递矩阵构建了一个灵活，简约的稳定性预测艺术品。这里是它的开始，最上游的组件。
+	二维、定常、不可压缩、无粘流动。
+`在柱坐标系`$(r,\theta)$ `中，径向空间（如离心压气机叶轮与扩压器之间的无叶空间）内的平均背景流动。假设流场轴对称`（$\partial/\partial\theta = 0$）`且无旋`（$\nabla \times \mathbf{V}=0$）`，壁面效应忽略。
 
-|    变量名    |                        符号                        |           单位           |        量纲         |                        说明                         |
-| :-------: | :----------------------------------------------: | :--------------------: | :---------------: | :-----------------------------------------------: |
-|   速度矢量    |           $\mathbf{v}$ 或 $\mathbf{V}$            |  $\text{m}/\text{s}$   |    $L T^{-1}$     |          二维速度场，分量为 $(V_x, V_\theta, 0)$           |
-|   涡量矢量    | $\boldsymbol{\omega} = \nabla \times \mathbf{V}$ |    $\text{s}^{-1}$     |     $T^{-1}$      |              速度的旋度，二维流动中仅有 $z$ 分量非零               |
-| 涡量 $z$ 分量 |                    $\omega_z$                    |    $\text{s}^{-1}$     |     $T^{-1}$      |                  二维流动中唯一的非零涡量分量                   |
-|    静压     |                       $p$                        |      $\text{Pa}$       | $M L^{-1} T^{-2}$ |                       流体静压                        |
-|    总压     |                      $p_t$                       |      $\text{Pa}$       | $M L^{-1} T^{-2}$ | 不可压流中 $p_t = p + \frac{1}{2}\rho\|\mathbf{V}\|^2$ |
-|    密度     |                      $\rho$                      | $\text{kg}/\text{m}^3$ |    $M L^{-3}$     |                    假设为常数（不可压缩）                    |
-|    势函数    |                      $\Phi$                      | $\text{m}^2/\text{s}$  |   $L^2 T^{-1}$    |         无旋流的速度势，$\mathbf{V} = \nabla\Phi$         |
-|  无因次势函数   |                   $\hat{\Phi}$                   |           –            |         1         |            $\hat{\Phi} = \Phi / (UR)$             |
-|   特征速度    |                       $U$                        |  $\text{m}/\text{s}$   |    $L T^{-1}$     |                     转子中径切线速度                      |
-|   特征长度    |                       $R$                        |       $\text{m}$       |        $L$        |                       平均半径                        |
-|   轴向坐标    |                       $x$                        |     $\text{m}$ 或 –     |      $L$ 或 1      |                  有量纲或已由 $R$ 无因次化                  |
-|   流量系数    |                 $\phi = V_x / U$                 |           –            |         1         |                      无因次轴向速度                      |
-|   无因次时间   |                  $\tau = tU/R$                   |           –            |         1         |                   以转子转动为特征的时间尺度                   |
+## 主要变量与符号
+
+| 变量名 | 符号 | 单位 | 量纲 | 说明 |
+| :-: | :-: | :-: | :-: | :-: |
+| 径向速度 | $v_r$ | $\text{m/s}$ | $L T^{-1}$ | 沿半径方向的速度分量 |
+| 周向速度 | $v_\theta$ | $\text{m/s}$ | $L T^{-1}$ | 垂直于半径的切向速度 |
+| 半径 | $r$ | $\text{m}$ | $L$ | 径向坐标 |
+| 密度 | $\rho$ | $\text{kg/m}^3$ | $M L^{-3}$ | 常数（不可压） |
+| 环量 | $\Gamma$ | $\text{m}^2/\text{s}$ | $L^2 T^{-1}$ | 绕某闭合曲线的速度环量，此处为常数 |
+| 流量常数 | $Q$ | $\text{m}^2/\text{s}$ | $L^2 T^{-1}$ | 单位高度上的体积流量 |
 
 ***
-# 主体
 # 1. 建模部分
-## 1.1 从欧拉方程到涡量方程
-无粘不可压流动的动量方程（欧拉方程）：
-$$ \frac{\partial \mathbf{v}}{\partial t} + (\mathbf{v} \cdot \nabla) \mathbf{v} = -\frac{1}{\rho} \nabla p  $$
-利用涡量$\nabla$恒等式：
-$$ (\mathbf{v} \cdot \nabla) \mathbf{v} = \nabla \left( \frac{1}{2} |\mathbf{v}|^2 \right) - \mathbf{v} \times (\nabla \times \mathbf{v}) $$
-代入欧拉方程：
-$$ \frac{\partial \mathbf{v}}{\partial t} + \nabla \left( \frac{1}{2} |\mathbf{v}|^2 \right) - \mathbf{v} \times \boldsymbol{\omega} = -\frac{1}{\rho} \nabla p $$
-引入总压 $p_t = p + \frac{1}{2}\rho |\mathbf{v}|^2$，两边乘 $\rho$ 并整理：
-$$ \rho \frac{\partial \mathbf{v}}{\partial t} - \rho(\mathbf{v} \times \boldsymbol{\omega}) = -\nabla p_t $$
-除以 $\rho$ 的形式：
-$$ \frac{\partial \mathbf{v}}{\partial t} - \mathbf{v} \times \boldsymbol{\omega} = -\frac{1}{\rho}\nabla p_t $$
-对上述两边取旋度 ($\nabla \times$)：
-$$ \nabla \times \left( \frac{\partial \mathbf{v}}{\partial t} \right) - \nabla \times (\mathbf{v} \times \boldsymbol{\omega}) = \nabla \times \left( -\frac{1}{\rho}\nabla p_t \right) $$
-逐项分析：
-*   **第一项**：$\nabla \times (\partial \mathbf{v} / \partial t) = \partial (\nabla \times \mathbf{v}) / \partial t = \partial \boldsymbol{\omega} / \partial t$
-*   **总压项**：标量函数梯度的旋度恒为零，即 $\nabla \times (\nabla f) \equiv 0$。因此 $\nabla \times (-\frac{1}{\rho}\nabla p_t) = 0$。
-*   **第二项**：利用旋度$\nabla$恒等式替换：
-$$ \nabla \times (\mathbf{v} \times \boldsymbol{\omega}) = (\boldsymbol{\omega} \cdot \nabla) \mathbf{v} - (\mathbf{v} \cdot \nabla) \boldsymbol{\omega} + \mathbf{v} (\nabla \cdot \boldsymbol{\omega}) - \boldsymbol{\omega} (\nabla \cdot \mathbf{v}) $$
-## 1.2 假设简化
-在轴-周向的二维流动中：
-*   **涡线拉伸项 $(\boldsymbol{\omega} \cdot \nabla) \mathbf{v} = 0$**：因为涡量只有*垂直于二维平面的*分量，即 $\boldsymbol{\omega} = [0, 0, \omega_z]$，而速度只有$x$和$\theta$两个分量，所以这一整项为0了。
-*   **旋度的散度恒为零**：$\nabla \cdot \boldsymbol{\omega} = 0$。
-*   **不可压连续性**：$\nabla \cdot \mathbf{v} = 0$。
+## 1.1 自由涡背景
+### 1.1.1 理想流动的速度分布推导
+在无叶空间内，流动为**二维、定常、不可压、无粘、轴对称**。柱坐标系 $(r,\theta)$ 中，速度场 $\mathbf{v} = (v_r(r), v_\theta(r), 0)$。
+- **连续方程（不可压）**：
+$$
+  \nabla \cdot \mathbf{v} = \frac{1}{r}\frac{\partial (r v_r)}{\partial r} + \frac{1}{r}\frac{\partial v_\theta}{\partial \theta} + \frac{\partial v_z}{\partial z} = 0
+$$
+轴对称且无轴向流动（$v_z=0$，$\partial/\partial\theta=0$）简化为：
+$$
+  \frac{1}{r}\frac{d}{dr}(r v_r) = 0 \quad \Longrightarrow \quad r v_r = \text{常数} \tag{1}
+$$
+定义该常数为 $Q$（流量常数），量纲为 $\text{m}^2/\text{s}$：
+$$
+  \boxed{v_r(r) = \frac{Q}{r}} \tag{2}
+$$
+- **无旋条件**：这一假设其实可以由上游管道里推导过的涡量输运方程体现：这两者都是二维，无黏的。但是这里的假设要比上游管道里的那个均匀背景假设弱一些。
 
-因此，旋度$\nabla$恒等式右边四项中的第一、三、四项全部为零，只剩下 $-(\mathbf{v} \cdot \nabla) \boldsymbol{\omega}$ 一项。
+自由涡的核心特征是**涡量为零**（$\nabla \times \mathbf{v}=0$）。在二维极坐标中，只有 $z$ 方向涡量分量：
+$$
+  \omega_z = \frac{1}{r}\frac{\partial (r v_\theta)}{\partial r} - \frac{1}{r}\frac{\partial v_r}{\partial \theta} = 0
+$$
+由于轴对称（$\partial v_r/\partial \theta = 0$），无旋条件简化为：
+$$
+  \frac{1}{r}\frac{d}{dr}(r v_\theta) = 0 \quad \Longrightarrow \quad r v_\theta = \text{常数} \tag{3}
+$$
+定义该常数为 $\Gamma$（环量常数），量纲为 $\text{m}^2/\text{s}$：
+$$
+  \boxed{v_\theta(r) = \frac{\Gamma}{r}} \tag{4}
+$$
+注意：$\Gamma$ 正是绕半径为 $r$ 的圆周的速度环量 $\oint \mathbf{v}\cdot d\mathbf{l} = 2\pi r v_\theta = 2\pi \Gamma$，与 $r$ 无关。
 
-代入上述结果，得到：
-$$ \frac{\partial \boldsymbol{\omega}}{\partial t} + (\mathbf{v} \cdot \nabla) \boldsymbol{\omega} = 0 $$
-左边正是 $\boldsymbol{\omega}$ 的物质导数 $D\boldsymbol{\omega} / Dt$。因为只有 $z$ 分量非零，最终得到涡量输运方程：
-$$ \boxed{\frac{D\omega_z}{Dt} = 0} $$
-## 1.3 线性化
-### 第一步：流函数定义
-为了自动满足不可压连续方程（$\frac{\partial v_x}{\partial x} + \frac{1}{R}\frac{\partial v_\theta}{\partial \theta} = 0$），定义流函数 $\psi(x,\theta,t)$：
+这是一个无源无旋流！
+### 1.1.2 动量方程检验
+对于上述速度分布，需验证其是否满足无粘流动的欧拉方程（径向与周向分量）。不可压、定常、无体积力时，柱坐标下的欧拉方程为：
+- **径向分量**：
 $$
-\boxed{v_x = \frac{1}{R}\frac{\partial \psi}{\partial \theta}, \qquad v_\theta = -\frac{\partial \psi}{\partial x}} 
+  v_r\frac{\partial v_r}{\partial r} + \frac{v_\theta}{r}\frac{\partial v_r}{\partial \theta} - \frac{v_\theta^2}{r} = -\frac{1}{\rho}\frac{\partial p}{\partial r}
 $$
-**曲率项说明**：这里 $1/R$ (R为常数）的出现是因为对 $\theta$ 的物理长度微分是 $R d\theta$，所以 $v_x = \frac{1}{R}\frac{\partial \psi}{\partial \theta}$ 保证了 $v_x$ 的量纲正确（m/s）。
+由于轴对称，$\partial v_r/\partial \theta = 0$，代入 $v_r = Q/r$，$v_\theta = \Gamma/r$：
+$$
+  \frac{Q}{r}\cdot \frac{d}{dr}\left(\frac{Q}{r}\right) - \frac{1}{r}\left(\frac{\Gamma}{r}\right)^2 = -\frac{1}{\rho}\frac{d p}{d r}
+$$
+计算导数：
+$$
+  \frac{d}{dr}\left(\frac{Q}{r}\right) = -\frac{Q}{r^2}
+$$
+因此：
+$$
+  \frac{Q}{r}\cdot\left(-\frac{Q}{r^2}\right) - \frac{\Gamma^2}{r^3} = -\frac{Q^2}{r^3} - \frac{\Gamma^2}{r^3} = -\frac{1}{\rho}\frac{d p}{d r}
+$$
+即：
+$$
+  \frac{d p}{d r} = \rho \frac{Q^2 + \Gamma^2}{r^3} \tag{5}
+$$
+- **周向分量**：
+$$
+  v_r\frac{\partial v_\theta}{\partial r} + \frac{v_\theta}{r}\frac{\partial v_\theta}{\partial \theta} + \frac{v_r v_\theta}{r} = -\frac{1}{\rho r}\frac{\partial p}{\partial \theta}
+$$
+轴对称下 $\partial p/\partial \theta = 0$，且 $\partial v_\theta/\partial \theta = 0$，代入得：
+  $$
+  v_r\frac{d v_\theta}{d r} + \frac{v_r v_\theta}{r} = 0
+  $$
+将 $v_r = Q/r$，$v_\theta = \Gamma/r$ 代入：
+  $$
+  \frac{Q}{r}\cdot\left(-\frac{\Gamma}{r^2}\right) + \frac{Q}{r}\cdot\frac{\Gamma}{r}\cdot\frac{1}{r} = -\frac{Q\Gamma}{r^3} + \frac{Q\Gamma}{r^3} = 0
+  $$
+自动满足。
 
-连续性方程变成：
+因此，式 (2) 和 (4) 同时满足连续方程、无旋条件和欧拉方程的周向分量，并导出一个可积分的径向压力梯度（式(5)）。积分可得压力分布：
 $$
-\frac{\partial v_x}{\partial x} + \frac{1}{R}\frac{\partial v_\theta}{\partial \theta}
-= \frac{\partial}{\partial x}\left( \frac{1}{R}\frac{\partial \psi}{\partial \theta} \right) + \frac{1}{R}\frac{\partial}{\partial \theta}\left( -\frac{\partial \psi}{\partial x} \right) = 0
+p(r) = p_0 - \frac{1}{2}\rho \frac{Q^2+\Gamma^2}{r^2}
 $$
-### 第二步：重新表示涡量输运
-在柱坐标 $(x, r, \theta)$ 中，对于二维流动，涡量的唯一非零分量为：
-$$
-\omega_z = \frac{\partial v_\theta}{\partial x} - \frac{1}{R}\frac{\partial v_x}{\partial \theta}
-$$
-将刚才的流函数代入：
-$$
-\omega_z = \frac{\partial}{\partial x}\left( -\frac{\partial \psi}{\partial x} \right) - \frac{1}{R}\frac{\partial}{\partial \theta}\left( \frac{1}{R}\frac{\partial \psi}{\partial \theta} \right)
-$$
-$$
-\omega_z = -\frac{\partial^2 \psi}{\partial x^2} - \frac{1}{R^2}\frac{\partial^2 \psi}{\partial \theta^2}
-$$
-定义拉普拉斯算子（在 $x,\theta$ 空间，保留曲率）为：
-$$
-\nabla^2 \equiv \frac{\partial^2}{\partial x^2} + \frac{1}{R^2}\frac{\partial^2}{\partial \theta^2}
-$$
-则：
-$$
-\boxed{\omega_z = -\nabla^2 \psi}
-$$
-### 第三步：涡量输运方程的线性化
-由**涡量输运方程（涡量守恒）**：
-$$
-\frac{D\omega_z}{Dt} = 0 \quad\Longrightarrow\quad
-\frac{\partial \omega_z}{\partial t} + v_x \frac{\partial \omega_z}{\partial x} + \frac{v_\theta}{R}\frac{\partial \omega_z}{\partial \theta} = 0 
-$$
-注意：最后一项中，对弧长的导数是 $\frac{v_\theta}{R}\frac{\partial}{\partial \theta}$，因为 $v_\theta = R\dot{\theta}$，而 $\frac{\partial}{\partial s} = \frac{1}{R}\frac{\partial}{\partial \theta}$。
+其中 $p_0$ 为无穷远处的参考压力。压力随半径减小而升高（向心流动减速增压），符合扩压器特性。
 
-将各变量分解为 **定常均匀背景流** 与 **小扰动**：
-$$
-\begin{aligned}
-v_x &= \overline{v}_x + \delta v_x, &\quad v_\theta &= \overline{v}_\theta + \delta v_\theta,\\
-\omega_z &= \overline{\omega}_z + \delta\zeta, &\quad \psi &= \overline{\psi} + \delta\psi
-\end{aligned}
-$$
-涡量输运方程就变成：
-$$
-\frac{\partial (\overline{\omega}_z + \delta\zeta)}{\partial t}
-+ (\overline{v}_x + \delta v_x)\frac{\partial (\overline{\omega}_z + \delta\zeta)}{\partial x}
-+ \frac{\overline{v}_\theta + \delta v_\theta}{R}\frac{\partial (\overline{\omega}_z + \delta\zeta)}{\partial \theta} = 0
-$$
-**逐项展开**：
-- 时间项：$\frac{\partial \overline{\omega}_z}{\partial t}=0$，剩余 $\frac{\partial \delta\zeta}{\partial t}$。
-- 第一对流项第一部分：$(\overline{v}_x + \delta v_x)\frac{\partial \overline{\omega}_z}{\partial x}$。由于背景均匀，$\frac{\partial \overline{\omega}_z}{\partial x}=0$，此项为 0。
-- 第一对流项第二部分：$(\overline{v}_x + \delta v_x)\frac{\partial \delta\zeta}{\partial x} = \overline{v}_x\frac{\partial \delta\zeta}{\partial x} + \delta v_x\frac{\partial \delta\zeta}{\partial x}$。
-- 第二对流项（含曲率）：$\frac{\overline{v}_\theta + \delta v_\theta}{R}\frac{\partial \overline{\omega}_z}{\partial \theta} = 0$（因为 $\frac{\partial \overline{\omega}_z}{\partial \theta}=0$）。
-- 第二对流项第二部分：$\frac{\overline{v}_\theta + \delta v_\theta}{R}\frac{\partial \delta\zeta}{\partial \theta} = \frac{\overline{v}_\theta}{R}\frac{\partial \delta\zeta}{\partial \theta} + \frac{\delta v_\theta}{R}\frac{\partial \delta\zeta}{\partial \theta}$。
+### 1.1.3 $\Gamma$ 与 $Q$ 的物理意义
 
-再忽略二阶小量（$\delta v_x\frac{\partial \delta\zeta}{\partial x}$ 和 $\frac{\delta v_\theta}{R}\frac{\partial \delta\zeta}{\partial \theta}$），得到线性化方程：
+- **$Q$（流量常数）**：由质量守恒决定。考虑无叶空间的高度为 $b$（垂直于 $r\theta$ 平面），则通过半径为 $r$ 的圆柱面的体积流量为：
 $$
-\frac{\partial \delta\zeta}{\partial t} + \overline{v}_x\frac{\partial \delta\zeta}{\partial x} + \frac{\overline{v}_\theta}{R}\frac{\partial \delta\zeta}{\partial \theta} = 0 
+  \dot q_{v} = (2\pi r b) \cdot v_r(r) = 2\pi b Q
 $$
-和$Model\space Ⅰ$一样**无量纲化**：取参考速度 $U$（转子中径切向速度），参考长度 $R$（平均半径）。
+因此 $Q = \dot q_{v} / (2\pi b)$，即 **单位高度上的流量（$b=1$ 时的流量）**。对于给定的工作点，$Q$ 由上游叶轮出口的径向流量决定。
 
-定义无量纲量：
+- **$\Gamma$（环量常数）**：由叶轮出口的切向速度分布决定。叶轮对流体做功，赋予流体周向动量。对于无叶空间入口（$r = r_2$，叶轮出口半径），平均周向速度 $v_{\theta 2}$ 可通过速度三角形和滑移因子计算。则 $\Gamma = r_2 v_{\theta 2}$。在无叶空间中，由于无粘且无外力矩，角动量守恒（即 $r v_\theta = \text{常数}$），因此 $\Gamma$ 沿径向不变。这也可以从周向欧拉方程直接推导：定常、无粘、轴对称下，周向动量方程为 $v_r \frac{d (r v_\theta)}{dr} = 0$，故 $r v_\theta = \text{常数}$。
+
+自由涡的速度分布是一个对数螺旋线：
+![[Spakovszky稳定性方法——模型Ⅱ——径向空间配图.png]]
+## 1.2 得到小扰动
+### 1.2.1 线性化
+将总流场分解为背景（上划线）与小扰动（$\delta$）：
 $$
-\tau = \frac{tU}{R},\quad \hat{x} = \frac{x}{R},\quad \hat{\theta} = \theta,\quad
-\hat{v}_x = \frac{v_x}{U},\quad \hat{v}_\theta = \frac{v_\theta}{U},\quad \delta\hat{\zeta} = \frac{\delta\zeta R}{U},\quad \delta\hat{\psi} = \frac{\delta\psi}{UR}
+v_r(r,\theta,t) = \overline{v}_r(r) + \delta v_r(r,\theta,t), \quad
+v_\theta(r,\theta,t) = \overline{v}_\theta(r) + \delta v_\theta(r,\theta,t), \quad
+p(r,\theta,t) = \overline{p}(r) + \delta p(r,\theta,t)
 $$
-背景速度无量纲化后记为 $\hat{\overline{v}}_x, \hat{\overline{v}}_\theta$。将上式无量纲化后有公因子$\frac{U^2}{R^2}$，约掉：
+涡量也分解为背景涡量 $\overline{\omega}_z$ 与扰动 $\delta\zeta$。由于背景无旋，$\overline{\omega}_z = 0$，故：
 $$
-\frac{\partial \delta\hat{\zeta}}{\partial \tau} + \hat{\overline{v}}_x\frac{\partial \delta\hat{\zeta}}{\partial \hat{x}} + \hat{\overline{v}}_\theta\frac{\partial \delta\hat{\zeta}}{\partial \hat{\theta}} = 0
+\omega_z = \delta\zeta
 $$
-### 第四步：流函数的线性化
-做类似分解：
+代入之前已经推导过的涡量输运方程：
 $$
-\omega_z = -\nabla^2\psi \;\Longrightarrow\; \overline{\omega}_z + \delta\zeta = -\nabla^2(\overline{\psi} + \delta\psi)
-$$
-背景流满足 $\overline{\omega}_z = -\nabla^2\overline{\psi}$。将两式相减：
-$$
-\delta\zeta = -\nabla^2\delta\psi
-$$
-其中拉普拉斯算子保持原样（包含曲率项）：
-$$
-\nabla^2\delta\psi = \frac{\partial^2 \delta\psi}{\partial x^2} + \frac{1}{R^2}\frac{\partial^2 \delta\psi}{\partial \theta^2}
-$$
-无量纲化后：
-$$
-\delta\hat\zeta = -\nabla^2 \delta\hat\psi,\quad \nabla^2 = \frac{\partial^2}{\partial \hat x^2}+\frac{\partial^2}{\partial \hat \theta^2}
+\frac{\partial \omega_z}{\partial t} + v_r \frac{\partial \omega_z}{\partial r} + \frac{v_\theta}{r} \frac{\partial \omega_z}{\partial \theta} = 0
 $$
 
-我必须补充说明的是，因为这里二维直管段大轮毂比无量纲化后可以看成圆环面展开成一个平面，本质上是笛卡尔坐标系，所以才有这种形式。
+得到：
+$$
+\frac{\partial \delta\zeta}{\partial t}
++ \left( \overline{v}_r + \delta v_r \right) \frac{\partial \delta\zeta}{\partial r}
++ \frac{\overline{v}_\theta + \delta v_\theta}{r} \frac{\partial \delta\zeta}{\partial \theta} = 0
+$$
+忽略二阶小量（$\delta v_r \partial \delta\zeta/\partial r$ 等），得到线性化方程：
+$$
+\frac{\partial \delta\zeta}{\partial t} + \overline{v}_r \frac{\partial \delta\zeta}{\partial r} + \frac{\overline{v}_\theta}{r} \frac{\partial \delta\zeta}{\partial \theta} = 0 
+$$
+也可以写成：
+$$
+\frac{\partial \delta\zeta}{\partial t} + \frac{Q}{r}\frac{\partial \delta\zeta}{\partial r} + \frac{\Gamma}{r^2} \frac{\partial \delta\zeta}{\partial \theta} = 0 \tag{6}
+$$
+然后，就该用流函数表示涡量并线性化了。
 
-现在我们就得到了两个控制方程，并且经过巧妙的变量替换以后，正好两个未知数，是可解的（平均流速度可以由稳态方程得到）。
+这里我应该说，流函数就是一个超级换元工具。原本的封闭系统由不可压缩连续性$+$二维动量方程解两个速度一个压力，流函数引入后把两个速度压缩成一个变量（在连续性方程的解里面继续找动量方程的解），然后涡量方程（通过取旋度，压力梯度消去了）把压力也换走，整个系统用阶次换变量，变得好解了。
 
-到这里，建模部分就完结了，我应该给个总结：引入流函数和涡量的核心思想是将二维无粘不可压流动的原始变量（速度、压力）重新配对：流函数自动满足连续性，涡量则通过取旋度消去压力梯度，将欧拉方程转化为涡量守恒方程（$D\boldsymbol{\omega}/Dt=0$）。其最大好处在于：压力完全被消除，非线性对流项简化为涡量的物质导数，线性化后成为一个纯粹的一阶双曲输运方程，可以解析求解（如特征线法）；同时流函数与涡量之间由泊松方程联系，实现了双曲型（涡量输运）与椭圆型（流函数重构）的分离，极大简化了稳定性分析中的模态求解。
+我们需要把涡量用流函数表达，首先给出这里的流函数定义：
+$$
+v_r = \frac{1}{r}\frac{\partial \psi}{\partial \theta}, \qquad v_\theta = -\frac{\partial \psi}{\partial r}
+$$
+将总流函数分解：$\psi = \overline{\psi}(r) + \delta\psi(r,\theta,t)$。背景流函数 $\overline{\psi}$ 可由背景速度积分得到（但不必要）。
 
-这一方法依赖的假设包括：二维流动（无径向变化）、无粘、不可压缩、大轮毂比（轴向管道半径视为常数），且在线性化时要求扰动幅值远小于背景流。其主要限制是：无法直接处理粘性（涡量扩散）、三维效应（涡线拉伸）以及可压缩性；此外，当流动存在强非线性或间断（如激波）时，涡量守恒的简单形式不再成立。
+由涡量定义，唯一还存活的分量是：
+$$
+\omega_z = \frac{1}{r}\frac{\partial (r v_\theta)}{\partial r} - \frac{1}{r}\frac{\partial v_r}{\partial \theta}
+$$
+
+将 $v_r, v_\theta$ 用 $\psi$ 表示，并线性化。对于扰动部分，由于背景无旋（$\overline{\omega}_z=0$），有：
+$$
+\delta\zeta = \frac{1}{r}\frac{\partial}{\partial r}\left( -r \frac{\partial \delta\psi}{\partial r} \right) - \frac{1}{r^2}\frac{\partial^2 \delta\psi}{\partial \theta^2}
+$$
+### 1.2.2 无量纲化
+引入特征量，具体定义和上游管道中保持一致：
+- 特征速度 $U$
+- 特征半径 $R$
+- 特征密度 $\rho$
+- 特征时间 $R/U$
+
+定义**无量纲变量**：
+$$
+\hat{r} = \frac{r}{R}, \quad \tau = \frac{t}{R/U} = \frac{tU}{R}, \quad \hat{\overline{v}}_r = \frac{\overline{v}_r}{U}, \quad \hat{\overline{v}}_\theta = \frac{\overline{v}_\theta}{U}, \quad \delta\hat{p} = \frac{\delta p}{\rho U^2}
+$$
+$$
+\delta\hat{\psi} = \frac{\delta\psi}{U R}, \quad \delta\hat{\zeta} = \frac{\delta\zeta R}{U}, \quad \hat{Q} = \frac{Q}{U R}, \quad \hat{\Gamma} = \frac{\Gamma}{U R}
+$$
+背景自由涡的无量纲形式：
+$$
+\hat{\overline{v}}_r = \frac{\hat{Q}}{\hat{r}}, \qquad \hat{\overline{v}}_\theta = \frac{\hat{\Gamma}}{\hat{r}}
+$$
+将式(6)两边乘以 $R/U^2$：
+$$
+\frac{\partial \delta\hat{\zeta}}{\partial \tau} + \frac{\hat{Q}}{\hat{r}} \frac{\partial \delta\hat{\zeta}}{\partial \hat{r}} + \frac{\hat{\Gamma}}{\hat{r}^2} \frac{\partial \delta\hat{\zeta}}{\partial \hat{\theta}} = 0 \tag{7}
+$$
+这就是我们的无量纲线性化涡量方程。
+
+同理，涡量和流函数的关系：
+$$
+-\delta\hat\zeta = \nabla^2 \delta\hat\psi, \quad \text{其中} \quad \nabla^2 = \frac{1}{\hat r}\frac{\partial}{\partial \hat r}\left( \hat r \frac{\partial}{\partial \hat r} \right) + \frac{1}{\hat r^2}\frac{\partial^2}{\partial \hat\theta^2} \tag{8}
+$$
+
+建模部分到此结束。
 ***
 # 2. 求解部分
-# 2.1 涡量方程部分
-首先是涡量方程（无量纲时域）：
+## 2.1时频变换
+由式(7)，对时间 $\tau$ 作单边拉普拉斯变换，记 $s$ 为无量纲拉普拉斯变量，$\delta\hat{Z}(\hat{r},\hat{\theta},s) = \mathcal{L}\{\delta\hat{\zeta}(\hat{r},\hat{\theta},\tau)\}$。
 $$
-\frac{\partial \delta\hat{\zeta}}{\partial \tau} + \hat{\overline{v}}_x\frac{\partial \delta\hat{\zeta}}{\partial \hat{x}} + \hat{\overline{v}}_\theta\frac{\partial \delta\hat{\zeta}}{\partial \hat{\theta}} = 0 \tag{A}
+s \delta\hat{Z} + \frac{\hat{Q}}{\hat{r}} \frac{\partial \delta\hat{Z}}{\partial \hat{r}} + \frac{\hat{\Gamma}}{\hat{r}^2} \frac{\partial \delta\hat{Z}}{\partial \hat{\theta}} = 0 \tag{9}
 $$
+由于流动在周向具有周期性（$2\pi$ 周期），将 $\delta\hat{Z}$ 展开为傅里叶级数：
 $$
--\delta\hat\zeta = \frac{\partial^2\delta\hat\psi}{\partial \hat x^2}+\frac{\partial^2\delta\hat\psi}{\partial \hat \theta^2} \qquad\Longrightarrow\qquad \delta\hat\zeta = -\nabla^2 \delta\hat\psi,\quad \nabla^2 = \frac{\partial^2}{\partial \hat x^2} + \frac{\partial^2}{\partial \hat \theta^2} \tag{B}
+\delta\hat{Z}(\hat{r},\hat{\theta},s) = \sum_{n=0}^{\infty} \delta\tilde{Z}_n(\hat{r},s) e^{j n \hat{\theta}} \tag{10}
 $$
-### 2.1.1 变换（时域 → 频域）
-用傅里叶和拉普拉斯变换处理是非常重要的步骤，这里不仅让涡量输运方程求解方便，还让后面流函数解的形式非常清晰！
+代入式(9)，利用各谐波正交性，对每个 $n$ 得到常微分方程：
+$$
+s \delta\tilde{Z}_n + \frac{\hat{Q}}{\hat{r}} \frac{d \delta\tilde{Z}_n}{d \hat{r}} + j n \frac{\hat{\Gamma}}{\hat{r}^2} \delta\tilde{Z}_n = 0, \quad n \ge 0 \tag{11}
+$$
+类似地，拉普拉斯变换后，无量纲流函数扰动 $\delta\hat{\Psi}(\hat{r},\hat{\theta},s) = \mathcal{L}\{\delta\hat{\psi}\}$ 与速度扰动的关系可仍沿用时域定义（拉普拉斯变换与空间导数可交换）：
+$$
+\delta\hat{V}_r = \frac{1}{\hat{r}} \frac{\partial \delta\hat{\Psi}}{\partial \hat{\theta}}, \qquad
+\delta\hat{V}_\theta = -\frac{\partial \delta\hat{\Psi}}{\partial \hat{r}}
+$$
+其中 $\delta\hat{V}_r = \mathcal{L}\{\delta\hat{v}_r\}$，$\delta\hat{V}_\theta = \mathcal{L}\{\delta\hat{v}_\theta\}$。
 
-先对时间 $\tau$ 做单边拉普拉斯变换，记
+涡量扰动 $\delta\hat{Z}$ 与 $\delta\hat{\Psi}$ 的关系（由式(8)拉普拉斯变换得到）为：
 $$
-\mathcal{L}\{ f(\tau) \} = F(s) = \int_0^\infty e^{-s\tau} f(\tau)\,d\tau
+\delta\hat{Z} = -\nabla^2 \delta\hat{\Psi}, \qquad
+\nabla^2 = \frac{1}{\hat{r}} \frac{\partial}{\partial \hat{r}} \left( \hat{r} \frac{\partial}{\partial \hat{r}} \right) + \frac{1}{\hat{r}^2} \frac{\partial^2}{\partial \hat{\theta}^2}
 $$
-并假设初始条件为零（$\tau=0$ 时扰动为零）。变换后 $\frac{\partial}{\partial\tau} \to s$，且变换与空间导数可交换。
+## 2.2 求解涡量扰动 $\delta\tilde{Z}_n$
+对每个谐波 $n \ge 0$，方程 (11) 为一阶线性齐次 ODE：
+$$
+s \delta\tilde{Z}_n + \frac{\hat{Q}}{\hat{r}} \frac{d \delta\tilde{Z}_n}{d \hat{r}} + j n \frac{\hat{\Gamma}}{\hat{r}^2} \delta\tilde{Z}_n = 0
+$$
+整理为：
+$$
+\frac{d \delta\tilde{Z}_n}{d \hat{r}} + \left( \frac{s \hat{r}}{\hat{Q}} + j n \frac{\hat{\Gamma}}{\hat{Q} \hat{r}} \right) \delta\tilde{Z}_n = 0
+$$
+分离变量并积分（从某个参考半径 $\hat{r}_0$ 到 $\hat{r}$）：
+$$
+\int_{\delta\tilde{Z}_n(\hat{r}_0)}^{\delta\tilde{Z}_n(\hat{r})} \frac{d \delta\tilde{Z}_n}{\delta\tilde{Z}_n}
+= -\int_{\hat{r}_0}^{\hat{r}} \left( \frac{s \xi}{\hat{Q}} + j n \frac{\hat{\Gamma}}{\hat{Q} \xi} \right) d\xi
+$$
+得：
+$$
+\ln \frac{\delta\tilde{Z}_n(\hat{r})}{\delta\tilde{Z}_n(\hat{r}_0)} = -\frac{s}{2\hat{Q}} (\hat{r}^2 - \hat{r}_0^2) - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \frac{\hat{r}}{\hat{r}_0}
+$$
+因此：
+$$
+\delta\tilde{Z}_n(\hat{r},s) = \delta\tilde{Z}_n(\hat{r}_0,s) \; \exp\!\left( -\frac{s}{2\hat{Q}} (\hat{r}^2 - \hat{r}_0^2) - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \frac{\hat{r}}{\hat{r}_0} \right)
+$$
+记 $\tilde{F}_n(s) = \delta\tilde{Z}_n(\hat{r}_0,s) \, e^{\frac{s}{2\hat{Q}} \hat{r}_0^2 + j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \hat{r}_0}$，则：
 
-定义像函数（频域无量纲扰动）：
 $$
-\delta\hat{Z}(\hat x,\hat\theta,s) = \mathcal{L}\{\delta\hat\zeta(\hat x,\hat\theta,\tau)\},\qquad
-\delta\hat{\Psi}(\hat x,\hat\theta,s) = \mathcal{L}\{\delta\hat\psi(\hat x,\hat\theta,\tau)\}
+\delta\tilde{Z}_n(\hat{r},s) = \tilde{F}_n(s) \; \exp\!\left( -\frac{s}{2\hat{Q}} \hat{r}^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \hat{r} \right) \tag{12}
+    $$
+该式适用于所有 $n \ge 0$。对于 $n=0$，指数中 $j n$ 项消失，变成：
 $$
-对方程 (A) 两边做拉普拉斯变换（基流只是数值，不变）：
+\delta\tilde{Z}_0(\hat{r},s) = \tilde{F}_0(s) \; \exp\!\left( -\frac{s}{2\hat{Q}} \hat{r}^2 \right)
 $$
-s \delta\hat{Z} + \hat{\overline{v}}_x \frac{\partial \delta\hat{Z}}{\partial \hat x} + \hat{\overline{v}}_\theta \frac{\partial \delta\hat{Z}}{\partial \hat \theta} = 0 \tag{C}
+于是：
 $$
-方程 (B) 不含时间导数，变换后形式不变：
+\boxed{\delta\hat{Z}(\hat{r},\hat{\theta},s) = \sum_{n=0}^{\infty}\tilde{F}_n(s) \; \exp\!\left( -\frac{s}{2\hat{Q}} \hat{r}^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \hat{r} + j n \hat\theta\right)} 
 $$
-\delta\hat{Z} = -\nabla^2 \delta\hat{\Psi} \tag{D}
+## 2.3 求解流函数泊松方程
+我们从频域泊松方程出发：
 $$
-将涡量扰动按圆周方向展开为傅里叶级数（物理量在周向必定是周期的）：
+\nabla^2 \delta\hat{\Psi} = -\delta\hat{Z}, \qquad
+\nabla^2 = \frac{1}{\hat{r}} \frac{\partial}{\partial \hat{r}} \left( \hat{r} \frac{\partial}{\partial \hat{r}} \right) + \frac{1}{\hat{r}^2} \frac{\partial^2}{\partial \hat{\theta}^2}
 $$
-\delta\hat{Z}(\hat x, \hat \theta, s) = \sum_{n=0}^{\infty} \delta\tilde{Z}_n(\hat x, s) \cdot e^{j n \hat \theta}
+其中 $\delta\hat{Z}(\hat{r},\hat{\theta},s)$ 由式 (12) 给出。将方程分解为齐次部分和非齐次部分，分别求解。
+### 2.3.1 齐次解
 $$
-其中：
-- $n$ 是周向波数（整数，$n=0$ 表示轴对称扰动）
-- $\delta\tilde{Z}_n(\hat x, s)$ 是第 $n$ 阶谐波的复振幅（沿轴向变化）
-
-将级数展开代入方程 (C)：
+\frac{1}{\hat{r}}\frac{\partial}{\partial \hat{r}}\left( \hat{r} \frac{\partial \delta\hat{\Psi}_h}{\partial \hat{r}} \right) + \frac{1}{\hat{r}^2}\frac{\partial^2 \delta\hat{\Psi}_h}{\partial \hat{\theta}^2} = 0 
 $$
-s \sum_{n=0}^{\infty} \delta\tilde{Z}_n e^{j n \hat\theta}
-+ \hat{\overline{v}}_x \sum_{n=0}^{\infty} \frac{d \delta\tilde{Z}_n}{d \hat x} e^{j n \hat\theta}
-+ \hat{\overline{v}}_\theta \sum_{n=0}^{\infty} (j n) \delta\tilde{Z}_n e^{j n \hat\theta}
-= 0
-$$
-由于各谐波 $e^{j n \hat\theta}$ 线性独立，可以对每个 $n$ 分别写出：
-$$
-\boxed{
-s \delta\tilde{Z}_n + \hat{\overline{v}}_x \frac{d \delta\tilde{Z}_n}{d \hat x} + j n \hat{\overline{v}}_\theta \delta\tilde{Z}_n = 0
-}
-$$
-## 2.1.2 求解涡量输运方程ODE
-现在的方程是一阶线性齐次 ODE（$\hat x$ 为自变量）。其通解为：
-$$
-\delta\tilde{Z}_n(\hat x, s) = \tilde{C}_n(s) \cdot \exp\left( -\frac{s + j n \hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} \hat x \right)
-$$
-其中 $\tilde{C}_n(s)$ 是由边界条件确定的复常数。
-
-将上式代回级数，得到涡量扰动的频域-空间表达式：
-$$
-\delta\hat{Z}(\hat x, \hat \theta, s) = \sum_{n=0}^{\infty} \tilde{C}_n(s) \cdot e^{j n \hat\theta} \cdot \exp\left( -\frac{s + j n \hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} \hat x \right)
-$$
-物理意义：涡量扰动被平均流向下游输运，且不同周向波数的扰动以不同的复波数传播。
-## 2.2 流函数部分
-涡量扰动与流函数扰动的关系是泊松方程：
-$$
-\delta\hat{Z}(\hat{x}, \hat{\theta}, s) = -\nabla^2 \delta\hat{\Psi}(\hat{x}, \hat{\theta}, s), \qquad
-\nabla^2 = \frac{\partial^2}{\partial \hat{x}^2} + \frac{\partial^2}{\partial \hat{\theta}^2} \tag{D}
-$$
-
-涡量扰动刚才才解出来：
-$$
-\delta\hat{Z}(\hat{x}, \hat{\theta}, s) = \sum_{n=0}^{\infty} \tilde{C}_n(s) e^{-k_n \hat{x}} e^{j n \hat{\theta}}, \quad
-k_n = \frac{s + j n \hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} \tag{E}
-$$
-### 2.2.1 求解流函数PDE
-将 $\delta\hat{Z}$ 代入 (D) 得：
-$$
-\frac{\partial^2 \delta\hat{\Psi}}{\partial \hat{x}^2} + \frac{\partial^2 \delta\hat{\Psi}}{\partial \hat{\theta}^2} = - \sum_{n=0}^{\infty} \tilde{C}_n(s) e^{-k_n \hat{x}} e^{j n \hat{\theta}} \tag{F}
-$$
-
-这是一个线性非齐次偏微分方程。其通解 = 齐次解 + 特解。
-#### 齐次方程：
-$$
-\frac{\partial^2 \delta\hat{\Psi}_h}{\partial \hat{x}^2} + \frac{\partial^2 \delta\hat{\Psi}_h}{\partial \hat{\theta}^2} = 0
-$$
-这是二维拉普拉斯方程。在直角坐标 $(\hat{x}, \hat{\theta})$ 中，其通解可分离变量，一般解为（见关联文件中，笛卡尔坐标系下的PDE求解部分）：
-$$
-\delta\hat{\Psi}_h(\hat{x}, \hat{\theta}, s) = \sum_{n=0}^{\infty} \left[ \tilde{A}_n(s) e^{n \hat{x}} + \tilde{B}_n(s) e^{-n \hat{x}} \right] \cos(n \hat{\theta} + \phi_n)
-$$
-但为了与指数形式的傅里叶级数匹配，通常采用复数形式：
-$$
-\delta\hat{\Psi}_h = \sum_{n=-\infty}^{\infty} \left( \tilde P_n e^{n \hat{x}} + \tilde Q_n e^{-n \hat{x}} \right) e^{j n \hat{\theta}}
-$$
-然而，当 $n=0$ 时，$e^{0\cdot \hat{x}} = 1$，此时拉普拉斯方程的解还包含 **$\hat{\theta}$ 和 $\hat{x}\hat{\theta}$ 的线性项（特征值为0时的项）**，因为：
-$$
-\frac{\partial^2}{\partial \hat{x}^2} (a \hat{\theta}) = 0,\quad
-\frac{\partial^2}{\partial \hat{\theta}^2} (a \hat{\theta}) = 0
-$$
-$$
-\frac{\partial^2}{\partial \hat{x}^2} (b \hat{x}\hat{\theta}) = 0,\quad
-\frac{\partial^2}{\partial \hat{\theta}^2} (b \hat{x}\hat{\theta}) = 0
-$$
-所以完整齐次解应包含：
-$$
-\delta\hat{\Psi}_h = \alpha_0(s) \hat{x} + \alpha_1(s) \hat{\theta} + \alpha_2(s) \hat{x}\hat{\theta} + \alpha_3(s)
-+ \sum_{n=1}^{\infty} \left( \tilde{A}_n(s) e^{n \hat{x}} + \tilde{B}_n(s) e^{-n \hat{x}} \right) e^{j n \hat{\theta}} + \text{共轭项}
-$$
-其中 $\alpha_0, \alpha_1, \alpha_2, \alpha_3$ 是 $s$ 的任意函数。
-#### 特解
-对于非齐次项中的每一谐波 $n$，设特解形式为：
-$$
-\delta\hat{\Psi}_{p,n} = \tilde{D}_n(s) e^{-k_n \hat{x}} e^{j n \hat{\theta}}
-$$
-代入 (F) 左边：
-$$
-\frac{\partial^2}{\partial \hat{x}^2} (\tilde{D}_n e^{-k_n \hat{x}} e^{j n \hat{\theta}}) = \tilde{D}_n k_n^2 e^{-k_n \hat{x}} e^{j n \hat{\theta}}
-$$
-$$
-\frac{\partial^2}{\partial \hat{\theta}^2} (\tilde{D}_n e^{-k_n \hat{x}} e^{j n \hat{\theta}}) = \tilde{D}_n (-n^2) e^{-k_n \hat{x}} e^{j n \hat{\theta}}
-$$
-总和：
-$$
-(k_n^2 - n^2) \tilde{D}_n e^{-k_n \hat{x}} e^{j n \hat{\theta}} = - \tilde{C}_n e^{-k_n \hat{x}} e^{j n \hat{\theta}}
-$$
-所以：
-$$
-\tilde{D}_n = - \frac{\tilde{C}_n}{k_n^2 - n^2}, \quad \text{当 } k_n^2 \neq n^2
-$$
-对于 $n=0$：
-$$
-\tilde{D}_0 = - \frac{\tilde{C}_0}{k_0^2}, \quad k_0 = s / \hat{\overline{v}}_x
-$$
-因此特解总和为：
-$$
-\delta\hat{\Psi}_p = - \sum_{n=0}^{\infty} \frac{\tilde{C}_n}{k_n^2 - n^2} e^{-k_n \hat{x}} e^{j n \hat{\theta}}
-$$
-（这里对 $n=0$，分母 $k_0^2 - 0^2$，成立）
-### 2.2.2 通解
-合并齐次解与特解：
+由分离变量法，齐次解为：
 $$
 \begin{aligned}
-\delta\hat{\Psi}(\hat{x}, \hat{\theta}, s) = &\ \alpha_0(s) \hat{x} + \alpha_1(s) \hat{\theta} + \alpha_2(s) \hat{x}\hat{\theta} + \alpha_3(s) \\
-&+ \sum_{n=1}^{\infty} \left( \tilde{A}_n(s) e^{n \hat{x}} + \tilde{B}_n(s) e^{-n \hat{x}} \right) e^{j n \hat{\theta}} \\
-&- \sum_{n=0}^{\infty} \frac{\tilde{C}_n(s)}{k_n^2 - n^2} e^{-k_n \hat{x}} e^{j n \hat{\theta}}
-\end{aligned} \tag{G}
+\delta\hat{\Psi}_h(\hat{r},\hat{\theta}) = &\alpha_0 + \alpha_1 \ln \hat{r} + \alpha_2 \hat{\theta} + \alpha_3 \hat{\theta} \ln \hat{r} \\
+&+ \sum_{n=1}^{\infty} \left( \tilde{D}_n \hat{r}^n + \tilde{E}_n \hat{r}^{-n} \right)
+\left( \delta\tilde{A}_n \cos n\hat{\theta} + \delta\tilde{B}_n \sin n\hat{\theta} \right)
+\end{aligned}
+$$
+这里常数项由于解的任意性可以弃掉，两个对数项会导致后面积分出来的压力多值，所以也弃掉。最后角度项虽然本身导致流函数多值性，但它贡献了 $n=0$ 的径向速度场，不能丢。
+### 2.3.2 特解（常数变易法）
+对于每个谐波 $n$，设 $\delta\hat{\Psi}_p = \sum_{n=0}^{\infty} \delta\tilde{\Psi}_{p,n}(\hat{r},s) e^{jn\hat{\theta}}$，代入得：
+$$
+\frac{1}{\hat{r}} \frac{d}{d\hat{r}}\left( \hat{r} \frac{d \delta\tilde{\Psi}_{p,n}}{d\hat{r}} \right) - \frac{n^2}{\hat{r}^2} \delta\tilde{\Psi}_{p,n} = -\tilde{F}_n(s) e^{-\frac{s}{2\hat{Q}} \hat{r}^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \hat{r}}
 $$
 
-其中当 $n=0$ 时，$e^{j0\hat{\theta}}=1$，且 $\tilde{C}_0$ 项单独处理。
-### 2.2.3 舍弃非物理项
-Spakovszky博士论文中注释指出：$\alpha_0$ 和 $\alpha_2$ 项会导致从两个动量方程导出的压力扰动相互矛盾，故舍弃。$\alpha_3$ 是常数，可保留但不影响速度。$\alpha_1 \hat{\theta}$ 项是物理的（产生均匀轴向速度），保留。
-
-因此简化：
-$$
-\delta\hat{\Psi}(\hat{x}, \hat{\theta}, s) = \alpha_1(s) \hat{\theta} + \alpha_3(s) + \sum_{n=1}^{\infty} \left( \tilde{A}_n(s) e^{n \hat{x}} + \tilde{B}_n(s) e^{-n \hat{x}} \right) e^{j n \hat{\theta}} - \sum_{n=0}^{\infty} \frac{\tilde{C}_n(s)}{k_n^2 - n^2} e^{-k_n \hat{x}} e^{j n \hat{\theta}}
-$$
-
-同时，注意到对于 $n=0$，$\tilde{A}_0 e^{0\cdot \hat{x}} = \tilde{A}_0$，可与 $\alpha_3$ 合并。论文将 $\alpha_1(s) \hat{\theta}$ 单独写出，并与 $n=0$ 的模态并列。所以我们写成：
-
-$$
-\begin{aligned}
-\delta\hat{\Psi}(\hat{x}, \hat{\theta}, s) = &\ \alpha_1(s) \hat{\theta} \\
-&+ \sum_{n=1}^{\infty} \tilde{A}_n(s) e^{n \hat{x}} e^{j n \hat{\theta}} + \sum_{n=1}^{\infty} \tilde{B}_n(s) e^{-n \hat{x}} e^{j n \hat{\theta}} \\
-&- \sum_{n=1}^{\infty} \frac{\tilde{C}_n(s)}{k_n^2 - n^2} e^{-k_n \hat{x}} e^{j n \hat{\theta}} \\
-&- \frac{\tilde{C}_0(s)}{k_0^2} e^{-k_0 \hat{x}} + \tilde{A}_0(s) \quad (\text{常数项})
-\end{aligned} \tag{H}
-$$
-
-### 2.2.4 系数重定义
-重新定义常数：
-- 对于 $n>0$：
-$$
-  A_n(s) \equiv j n \tilde{A}_n(s), \quad B_n(s) \equiv j n \tilde{B}_n(s), \quad C_n(s) \equiv - j n \frac{\tilde{C}_n(s)}{k_n^2 - n^2}
-  $$
+> [!NOTE]
+> 常数变易法给出特解：
+> $$
+> y_p = y_1 \int \frac{-y_2 f}{W} d\hat{r} + y_2 \int \frac{y_1 f}{W} d\hat{r}
+> $$
+> 其中 $f = -\delta\tilde{Z}_n$，$W = y_1 y_2' - y_2 y_1'$。
 - 对于 $n=0$：
 $$
-  C_0(s) \equiv - \frac{\tilde{C}_0(s)}{k_0^2} = - \tilde{C}_0(s) \frac{\hat{\overline{v}}_x^2}{s^2}, \quad A_0(s) \equiv \alpha_1(s)
-$$并忽略常数 $\tilde{A}_0(s)$。
-
-代入 (H) 得到：
+\delta\tilde{\Psi}_{p,0} = \tilde{F}_0(s) \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \cdot \xi\,(\ln \hat{r} - \ln \xi) \, d\xi$$
+- 对于 $n>0$：
+  $$
+  \delta\tilde{\Psi}_{p,n} = \tilde{F}_n(s) \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}} \xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( \hat{r}^n \xi^{-n+1} - \hat{r}^{-n} \xi^{n+1} \right) d\xi
+  $$
+记积分结果为 $\tilde{\mathcal{R}}_n(\hat{r},s)$，则 $\delta\tilde{\Psi}_{p,n} = \tilde{F}_n(s) \tilde{\mathcal{R}}_n(\hat{r},s)$。
+### 2.3.3 叠加齐次解与特解
+完整流函数（频域）：
 $$
-\begin{aligned}
-\delta\hat{\Psi}(\hat{x}, \hat{\theta}, s) = &\ A_0(s) \hat{\theta} \\
-&+ \sum_{n=1}^{\infty} \frac{A_n(s)}{j n} e^{n \hat{x} + j n \hat{\theta}} 
-   + \sum_{n=1}^{\infty} \frac{B_n(s)}{j n} e^{-n \hat{x} + j n \hat{\theta}} \\
-&+ C_0(s) e^{-k_0 \hat{x}} 
-   + \sum_{n=1}^{\infty} \frac{C_n(s)}{j n} e^{-k_n \hat{x} + j n \hat{\theta}}
-\end{aligned} \tag{I}
+\delta\tilde{\Psi}_n(\hat{r},s) = \delta\tilde{\Psi}_{h,n}(\hat{r},s) + \tilde{F}_n(s) \tilde{\mathcal{R}}_n(\hat{r},s)
 $$
-其中 $k_0 = s / \hat{\overline{v}}_x$，$k_n = \frac{s + j n \hat{\overline{v}}_\theta}{\hat{\overline{v}}_x}$。
-### 2.2.5 最终形式
-写完整就是：
-$$
-\boxed{
-\begin{aligned}
-\delta\hat{\Psi}(\hat{x}, \hat{\theta}, s) = &\ A_0(s)\,\hat{\theta} \;+\; \sum_{n=1}^{\infty} \frac{A_n(s)}{j n} e^{n \hat{x} + j n \hat{\theta}} \\
-&+ \sum_{n=1}^{\infty} \frac{B_n(s)}{j n} e^{-n \hat{x} + j n \hat{\theta}} \\
-&+ C_0(s) e^{-\frac{s}{\hat{\overline{v}}_x} \hat{x}} \;+\; \sum_{n=1}^{\infty} \frac{C_n(s)}{j n} e^{-\left( \frac{s}{\hat{\overline{v}}_x} + j n \frac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} \right) \hat{x} + j n \hat{\theta}}
-\end{aligned}
-} 
-$$
-### 2.2.6 物理解释
-- $A_0(s)\hat{\theta}$：由 $n=0$ 齐次解中的 $\alpha_1 \hat{\theta}$ 项，对应 **均匀轴向速度扰动** $\delta\hat{V}_x = A_0(s)$。
-- 含 $A_n(s)$ 的项：向上游衰减的势模态。
-- 含 $B_n(s)$ 的项：向下游衰减的势模态。
-- 含 $C_0(s)$ 的项：轴对称的涡模态，向下游对流。
-- 含 $C_n(s)$ 的项：高阶涡模态，同时向下游传播并周向旋转。
-## 2.3 从流函数解得到速度扰动
-流函数解（式 (I)）为：
-
-$$
-\begin{aligned}
-\delta\hat{\Psi}(\hat{x}, \hat{\theta}, s) = &\ A_0(s)\,\hat{\theta} \;+\; \sum_{n=1}^{\infty} \frac{A_n(s)}{j n} e^{n \hat{x} + j n \hat{\theta}} \\
-&+ \sum_{n=1}^{\infty} \frac{B_n(s)}{j n} e^{-n \hat{x} + j n \hat{\theta}} \\
-&+ C_0(s) e^{-\frac{s}{\hat{\overline{v}}_x} \hat{x}} \;+\; \sum_{n=1}^{\infty} \frac{C_n(s)}{j n} e^{-\left( \frac{s}{\hat{\overline{v}}_x} + j n \frac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} \right) \hat{x} + j n \hat{\theta}}
-\end{aligned}
-$$
-
-其中 $A_n(s), B_n(s), C_n(s)$ 为待定系数，$\hat{\overline{v}}_x, \hat{\overline{v}}_\theta$ 为无量纲背景速度常数。
-
-根据流函数定义（无量纲化后）：
-$$
-\delta\hat{V}_x = \frac{\partial \delta\hat{\Psi}}{\partial \hat{\theta}}, \qquad
-\delta\hat{V}_\theta = -\frac{\partial \delta\hat{\Psi}}{\partial \hat{x}}
-$$
-### 2.3.1 轴向速度扰动 $\delta\hat{V}_x$
-对 $\hat\theta$ 求偏导：
-- 第一项：$\displaystyle \frac{\partial}{\partial\hat\theta}\bigl( A_0(s)\,\hat\theta \bigr) = A_0(s)$
-- 第二项（$n\ge1$）：$\displaystyle \frac{\partial}{\partial\hat\theta}\left( \frac{A_n(s)}{j n} e^{n\hat{x} + j n\hat\theta} \right) = A_n(s) e^{n\hat{x} + j n\hat\theta}$
-- 第三项（$n\ge1$）：$\displaystyle \frac{\partial}{\partial\hat\theta}\left( \frac{B_n(s)}{j n} e^{-n\hat{x} + j n\hat\theta} \right) = B_n(s) e^{-n\hat{x} + j n\hat\theta}$
-- 第四项：$\displaystyle \frac{\partial}{\partial\hat\theta}\left( C_0(s) e^{-\frac{s}{\hat{\overline{v}}_x}\hat{x}} \right) = 0$
-- 第五项（$n\ge1$）：$\displaystyle \frac{\partial}{\partial\hat\theta}\left( \frac{C_n(s)}{j n} e^{-k_n\hat{x} + j n\hat\theta} \right) = C_n(s) e^{-k_n\hat{x} + j n\hat\theta}$，其中 $k_n = \frac{s}{\hat{\overline{v}}_x} + j n \frac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x}$
-
-合并得：
-
-$$
-\boxed{
-\delta\hat{V}_x(\hat{x},\hat\theta,s) = A_0(s) \;+\; \sum_{n=1}^{\infty} \Bigl[ A_n(s) e^{n\hat{x}} + B_n(s) e^{-n\hat{x}} + C_n(s) e^{-k_n\hat{x}} \Bigr] e^{j n\hat\theta}
-} \tag{J}
-$$
-### 2.3.2 周向速度扰动 $\delta\hat{V}_\theta$
-先计算 $-\partial/\partial\hat{x}$ 作用于各项：
-- 第一项：$\displaystyle -\frac{\partial}{\partial\hat{x}}\bigl( A_0(s)\,\hat\theta \bigr) = 0$
-- 第二项（$n\ge1$）：$\displaystyle -\frac{\partial}{\partial\hat{x}}\left( \frac{A_n(s)}{j n} e^{n\hat{x} + j n\hat\theta} \right) = j A_n(s) e^{n\hat{x} + j n\hat\theta}$
-- 第三项（$n\ge1$）：$\displaystyle -\frac{\partial}{\partial\hat{x}}\left( \frac{B_n(s)}{j n} e^{-n\hat{x} + j n\hat\theta} \right) = -j B_n(s) e^{-n\hat{x} + j n\hat\theta}$
-- 第四项：$\displaystyle -\frac{\partial}{\partial\hat{x}}\left( C_0(s) e^{-\frac{s}{\hat{\overline{v}}_x}\hat{x}} \right) = \frac{s}{\hat{\overline{v}}_x} C_0(s) e^{-\frac{s}{\hat{\overline{v}}_x}\hat{x}}$
-- 第五项（$n\ge1$）：$\displaystyle -\frac{\partial}{\partial\hat{x}}\left( \frac{C_n(s)}{j n} e^{-k_n\hat{x} + j n\hat\theta} \right) = \frac{k_n}{j n} C_n(s) e^{-k_n\hat{x} + j n\hat\theta} = \left( \frac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} - j\frac{s}{n\hat{\overline{v}}_x} \right) C_n(s) e^{-k_n\hat{x} + j n\hat\theta}$
-
-因此：
-
-$$
-\boxed{
-\begin{aligned}
-\delta\hat{V}_\theta(\hat{x},\hat\theta,s) = &\ j\sum_{n=1}^{\infty} A_n(s) e^{n\hat{x} + j n\hat\theta} \;-\; j\sum_{n=1}^{\infty} B_n(s) e^{-n\hat{x} + j n\hat\theta} \\
-&+ \frac{s}{\hat{\overline{v}}_x} C_0(s) e^{-\frac{s}{\hat{\overline{v}}_x}\hat{x}} \;+\; \sum_{n=1}^{\infty} \left( \frac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} - j\frac{s}{n\hat{\overline{v}}_x} \right) C_n(s) e^{-k_n\hat{x} + j n\hat\theta}
-\end{aligned}
-} \tag{K}
-$$
-## 2.4 压力扰动 $\delta\hat{P}$
-无量纲线性化欧拉方程的 $x$ 分量（频域）为：
-$$
-s \delta\hat{V}_x + \hat{\overline{v}}_x \frac{\partial \delta\hat{V}_x}{\partial \hat{x}} + \hat{\overline{v}}_\theta \frac{\partial \delta\hat{V}_x}{\partial \hat{\theta}} = -\frac{\partial \delta\hat{P}}{\partial \hat{x}} \tag{L}
-$$
-将 $\delta\hat{V}_x$ 的表达式 (J) 代入。由于方程线性且各谐波独立，分别处理 $n=0$ 和 $n \ge 1$ 的 Fourier 系数。采用**从参考点 $\hat{x}_0$ 到 $\hat{x}$ 的定积分**。
-### 2.4.1 $n = 0$：轴对称扰动
-对于 $n=0$，$\delta\hat{V}_x^{(0)} = A_0(s)$（与 $\hat{x}$ 无关），且 $\partial/\partial\hat{\theta}=0$。代入 (L)：
-$$
-s A_0(s) = -\frac{d \delta\tilde{P}_0}{d \hat{x}}
-$$
-从 $\hat{x}_0$ 到 $\hat{x}$ 积分：
-$$
-\delta\tilde{P}_0(\hat{x}) - \delta\tilde{P}_0(\hat{x}_0) = -s A_0(s) (\hat{x} - \hat{x}_0)
-$$
-
-通常取参考点 $\hat{x}_0 = 0$，并记 $\delta\hat{P}_0(0)$ 为已知值，则：
-
-$$
-\boxed{ \delta\tilde{P}_0(\hat{x}) = \delta\tilde{P}_0(0) - s A_0(s) \,\hat{x} } \tag{M}
-$$
-### 2.4.2 $n \ge 1$：非轴对称扰动
-对于固定的 $n$，$\delta\hat{V}_x^{(n)}(\hat{x}) = A_n e^{n\hat{x}} + B_n e^{-n\hat{x}} + C_n e^{-k_n\hat{x}}$，其中 $k_n = \dfrac{s}{\hat{\overline{v}}_x} + j n \dfrac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x}$。代入 (L) 的 $n$ 次谐波分量（$\partial/\partial\hat{\theta} \to j n$）：
-$$
-s \delta\hat{V}_x^{(n)} + \hat{\overline{v}}_x \frac{d \delta\hat{V}_x^{(n)}}{d \hat{x}} + j n \hat{\overline{v}}_\theta \delta\hat{V}_x^{(n)} = -\frac{d \delta\tilde{P}_n}{d \hat{x}} \tag{N}
-$$
-逐项计算左端：
-- 对 $A_n e^{n\hat{x}}$：贡献 $\lambda_A A_n e^{n\hat{x}}$，其中 $\lambda_A = s + n(\hat{\overline{v}}_x + j \hat{\overline{v}}_\theta)$
-- 对 $B_n e^{-n\hat{x}}$：贡献 $\lambda_B B_n e^{-n\hat{x}}$，其中 $\lambda_B = s - n\hat{\overline{v}}_x + j n \hat{\overline{v}}_\theta$
-- 对 $C_n e^{-k_n\hat{x}}$：贡献为零
-
+- 当 $n>0$：$\delta\tilde{\Psi}_{h,n} = \tilde{D}_n(s) \hat{r}^n + \tilde{E}_n(s) \hat{r}^{-n}$；
+- 当 $n=0$：$\delta\tilde{\Psi}_{h,0} = \tilde{D}_0(s)\hat\theta$。
 因此：
 $$
-\frac{d \delta\tilde{P}_n}{d \hat{x}} = -\left( \lambda_A A_n e^{n\hat{x}} + \lambda_B B_n e^{-n\hat{x}} \right) \tag{O}
+\delta\tilde{\Psi}_n(\hat{r},s) = 
+\begin{cases}
+\tilde{D}_0(s)\hat \theta + \tilde{F}_0(s) \delta\tilde{\mathcal{R}}_0(\hat{r},s), & n=0 \\
+\tilde{D}_n(s) \hat{r}^n + \tilde{E}_n(s) \hat{r}^{-n} + \tilde{F}_n(s) \tilde{\mathcal{R}}_n(\hat{r},s), & n>0
+\end{cases}
 $$
-从参考点 $\hat{x}_0$ 到 $\hat{x}$ 积分：
+最后有[^1]：
 $$
-\delta\tilde{P}_n(\hat{x}) - \delta\tilde{P}_n(\hat{x}_0) = -\int_{\hat{x}_0}^{\hat{x}} \left( \lambda_A A_n e^{n\xi} + \lambda_B B_n e^{-n\xi} \right) d\xi
+\begin{aligned}
+\delta\hat{\Psi}(\hat{r},\hat{\theta},s) = &\ \tilde{D}_0(s)\,\hat{\theta} \\
+&+ \sum_{n=1}^{\infty} \Bigl[ \tilde{D}_n(s)\,\hat{r}^{n} + \tilde{E}_n(s)\,\hat{r}^{-n} \Bigr] e^{j n \hat{\theta}} \\
+&+ \tilde{F}_0(s) \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \cdot \xi\,(\ln \hat{r} - \ln \xi) \, d\xi\\
+&+ \sum_{n=1}^{\infty} \tilde{F}_n(s) \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}} \xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( \hat{r}^n \xi^{-n+1} - \hat{r}^{-n} \xi^{n+1} \right) d\xi \; e^{j n \hat{\theta}}
+\end{aligned}\tag{13}
 $$
-计算积分：
+## 2.4 由流函数扰动导出速度扰动
+扰动速度与扰动流函数的关系为：
 $$
-\int_{\hat{x}_0}^{\hat{x}} \lambda_A A_n e^{n\xi} d\xi = \frac{\lambda_A A_n}{n} \left( e^{n\hat{x}} - e^{n\hat{x}_0} \right)
+\delta\hat{V}_r = \frac{1}{\hat{r}}\frac{\partial (\delta\hat{\Psi})}{\partial \hat{\theta}}, \qquad
+\delta\hat{V}_\theta = -\frac{\partial (\delta\hat{\Psi})}{\partial \hat{r}}
+$$
+频域中 $\delta\hat{\Psi}(\hat{r},\hat{\theta},s) = \mathcal{L}\{\delta\hat{\psi}\}$：
+$$
+\begin{aligned}
+\delta\hat{\Psi}(\hat{r},\hat{\theta},s) = &\ \tilde{D}_0(s)\,\hat{\theta} \\
+&+ \sum_{n=1}^{\infty} \Bigl[ \tilde{D}_n(s)\,\hat{r}^{n} + \tilde{E}_n(s)\,\hat{r}^{-n} \Bigr] e^{j n \hat{\theta}} \\
+&+ \tilde{F}_0(s)\,\tilde{\mathcal{I}}_0(\hat{r},s) \\
+&+ \sum_{n=1}^{\infty} \tilde{F}_n(s)\,\tilde{\mathcal{R}}_n(\hat{r},s)\; e^{j n \hat{\theta}}
+\end{aligned}
+$$
+其中辅助函数：
+$$
+\tilde{\mathcal{I}}_0(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \cdot \xi\,(\ln \hat{r} - \ln \xi) \, d\xi,
 $$
 $$
-\int_{\hat{x}_0}^{\hat{x}} \lambda_B B_n e^{-n\xi} d\xi = -\frac{\lambda_B B_n}{n} \left( e^{-n\hat{x}} - e^{-n\hat{x}_0} \right)
+\tilde{\mathcal{R}}_n(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( \hat{r}^{n} \xi^{-n+1} - \hat{r}^{-n} \xi^{n+1} \right) d\xi.
 $$
-因此：
+### 2.4.1 径向速度扰动 $\delta\hat{V}_r$
+由 $\delta\hat{V}_r = \frac{1}{\hat{r}}\frac{\partial \delta\hat{\Psi}}{\partial \hat{\theta}}$，先计算 $\partial\delta\hat{\Psi}/\partial\hat{\theta}$。
+- **第一项** $\tilde{D}_0(s)\,\hat{\theta}$：对 $\hat{\theta}$ 导数为 $\tilde{D}_0(s)$。
+- **第二项**（$n\ge1$）：$\bigl[\tilde{D}_n \hat{r}^{n}+\tilde{E}_n \hat{r}^{-n}\bigr] e^{jn\hat{\theta}}$ 的导数为 $j n \bigl[\tilde{D}_n \hat{r}^{n}+\tilde{E}_n \hat{r}^{-n}\bigr] e^{jn\hat{\theta}}$。
+- **第三项** $\tilde{F}_0 \delta\tilde{\mathcal{I}}_0$：与 $\hat{\theta}$ 无关，导数为 0。
+- **第四项**（$n\ge1$）：$\tilde{F}_n \tilde{\mathcal{R}}_n e^{jn\hat{\theta}}$ 的导数为 $j n \tilde{F}_n \tilde{\mathcal{R}}_n e^{jn\hat{\theta}}$。
+
+于是：
 $$
-\delta\tilde{P}_n(\hat{x}) = \delta\tilde{P}_n(\hat{x}_0) - \frac{\lambda_A A_n}{n} \left( e^{n\hat{x}} - e^{n\hat{x}_0} \right) + \frac{\lambda_B B_n}{n} \left( e^{-n\hat{x}} - e^{-n\hat{x}_0} \right) \tag{P}
+\frac{\partial \delta\hat{\Psi}}{\partial \hat{\theta}} = \tilde{D}_0(s) + \sum_{n=1}^{\infty} j n \Bigl[ \tilde{D}_n(s) \hat{r}^{n} + \tilde{E}_n(s) \hat{r}^{-n} + \tilde{F}_n(s) \tilde{\mathcal{R}}_n(\hat{r},s) \Bigr] e^{j n \hat{\theta}}
 $$
 
-通常取参考点 $\hat{x}_0 = 0$，则：
-$$
-\boxed{ \delta\tilde{P}_n(\hat{x}) = \delta\tilde{P}_n(0) - \frac{\lambda_A A_n}{n} \left( e^{n\hat{x}} - 1 \right) + \frac{\lambda_B B_n}{n} \left( e^{-n\hat{x}} - 1 \right) } \tag{P'}
-$$
-### 2.4.3 完整压力扰动表达式
-综合 $n=0$ 和 $n \ge 1$ 的结果：
+除以 $\hat{r}$ 即得径向速度扰动：
 $$
 \boxed{
-\begin{aligned}
-\delta\hat{P}(\hat{x},\hat{\theta},s) = &\ \bigl[ \delta\tilde{P}_0(0) - s A_0(s) \,\hat{x} \bigr] \\
-&+ \sum_{n=1}^{\infty} \Biggl[ \delta\tilde{P}_n(0) - \frac{\lambda_A A_n}{n} \bigl( e^{n\hat{x}} - 1 \bigr) + \frac{\lambda_B B_n}{n} \bigl( e^{-n\hat{x}} - 1 \bigr) \Biggr] e^{j n \hat{\theta}}
-\end{aligned}
+\delta\hat{V}_r(\hat{r},\hat{\theta},s) = \frac{\tilde{D}_0(s)}{\hat{r}} + \sum_{n=1}^{\infty} \frac{j n}{\hat{r}} \Bigl[ \tilde{D}_n(s) \hat{r}^{n} + \tilde{E}_n(s) \hat{r}^{-n} + \tilde{F}_n(s) \tilde{\mathcal{R}}_n(\hat{r},s) \Bigr] e^{j n \hat{\theta}}
+} \tag{14}
+$$
+### 2.4.2 周向速度扰动 $\delta\hat{V}_\theta$
+由 $\delta\hat{V}_\theta = -\frac{\partial \delta\hat{\Psi}}{\partial \hat{r}}$，计算 $\partial\delta\hat{\Psi}/\partial \hat{r}$ 逐项求导。
+**(a) 第一项** $\tilde{D}_0(s)\,\hat{\theta}$：对 $\hat{r}$ 导数为 0。
+**(b) 第二项（$n\ge1$）**：
+$$
+\frac{\partial}{\partial \hat{r}}\Bigl[ \bigl(\tilde{D}_n \hat{r}^{n}+\tilde{E}_n \hat{r}^{-n}\bigr) e^{jn\hat{\theta}} \Bigr] = \bigl( n \tilde{D}_n \hat{r}^{n-1} - n \tilde{E}_n \hat{r}^{-n-1} \bigr) e^{jn\hat{\theta}}.
+$$
+**(c) 第三项（$n=0$ 特解）**：
+$$
+\frac{\partial}{\partial \hat{r}}\bigl[ \tilde{F}_0 \tilde{\mathcal{I}}_0 \bigr] = \tilde{F}_0 \frac{\partial \tilde{\mathcal{I}}_0}{\partial \hat{r}}.
+$$
+由莱布尼茨法则：
+$$
+\frac{\partial \delta\tilde{\mathcal{I}}_0}{\partial \hat{r}} = e^{-\frac{s}{2\hat{Q}}\hat{r}^2} \hat{r} (\ln \hat{r} - \ln \hat{r}) + \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi \cdot \frac{1}{\hat{r}} d\xi = \frac{1}{\hat{r}} \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi d\xi \equiv \frac{\tilde{J}_0(\hat{r},s)}{\hat{r}},
+$$
+其中定义
+$$
+\tilde{J}_0(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi d\xi = \frac{\hat{Q}}{s}\left( e^{-\frac{s}{2\hat{Q}}\hat{r}_0^2} - e^{-\frac{s}{2\hat{Q}}\hat{r}^2} \right) \quad (s \neq 0).
+$$
+**(d) 第四项（$n\ge1$ 特解）**：
+$$
+\frac{\partial}{\partial \hat{r}}\bigl[ \tilde{F}_n \tilde{\mathcal{R}}_n e^{jn\hat{\theta}} \bigr] = \tilde{F}_n \frac{\partial \tilde{\mathcal{R}}_n}{\partial \hat{r}} e^{jn\hat{\theta}}.
+$$
+$\tilde{\mathcal{R}}_n$ 的定义中，被积函数显含 $\hat{r}$ 于括号内。求导时，上限代入的边界项相消（因为 $\hat{r}^n \hat{r}^{-n+1} - \hat{r}^{-n} \hat{r}^{n+1}=0$），故只需对括号内求导：
+$$
+\frac{\partial \tilde{\mathcal{R}}_n}{\partial \hat{r}} = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( n \hat{r}^{n-1} \xi^{-n+1} + n \hat{r}^{-n-1} \xi^{n+1} \right) d\xi = n \tilde{\mathcal{S}}_n(\hat{r},s),
+$$
+其中
+$$
+\tilde{\mathcal{S}}_n(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( \hat{r}^{n-1} \xi^{-n+1} + \hat{r}^{-n-1} \xi^{n+1} \right) d\xi.
+$$
+现在将以上导数组合成 $-\partial\delta\hat{\Psi}/\partial\hat{r}$：
+$$
+\delta\hat{V}_\theta = - \left[ \sum_{n=1}^{\infty} (n \tilde{D}_n \hat{r}^{n-1} - n \tilde{E}_n \hat{r}^{-n-1}) e^{jn\hat{\theta}} + \tilde{F}_0 \frac{\delta\tilde{J}_0}{\hat{r}} + \sum_{n=1}^{\infty} \tilde{F}_n \, n \delta\tilde{\mathcal{S}}_n e^{jn\hat{\theta}} \right].
+$$
+整理得：
+$$
+\boxed{
+\delta\hat{V}_\theta(\hat{r},\hat{\theta},s) = -\frac{\tilde{F}_0(s) \tilde{J}_0(\hat{r},s)}{\hat{r}} - \sum_{n=1}^{\infty} n \Bigl[ \tilde{D}_n(s) \hat{r}^{n-1} - \tilde{E}_n(s) \hat{r}^{-n-1} + \tilde{F}_n(s) \tilde{\mathcal{S}}_n(\hat{r},s) \Bigr] e^{j n \hat{\theta}}.
+}\tag{15}
+$$
+## 2.5 压力扰动推导
+### 2.5.1 轴对称扰动（$n=0$）
+从线性化的径向动量方程出发，推导压力扰动 $\delta\tilde{P}_0$ 的表达式。
+
+**步骤 1：线性化径向动量方程**
+柱坐标系下，不可压无粘流动的径向动量方程为：
+$$
+\frac{\partial v_r}{\partial t} + v_r \frac{\partial v_r}{\partial r} + \frac{v_\theta}{r}\frac{\partial v_r}{\partial \theta} - \frac{v_\theta^2}{r} = -\frac{1}{\rho}\frac{\partial p}{\partial r}
+$$
+将流动分解为背景（上划线）与小扰动（$\delta$）：
+$$
+v_r = \overline{v}_r(r) + \delta v_r(r,\theta,t),\quad
+v_\theta = \overline{v}_\theta(r) + \delta v_\theta(r,\theta,t),\quad
+p = \overline{p}(r) + \delta p(r,\theta,t)
+$$
+代入方程，减去背景部分（满足定常欧拉方程），忽略二阶小量，得到线性化方程：
+$$
+\frac{\partial \delta v_r}{\partial t}
++ \overline{v}_r \frac{\partial \delta v_r}{\partial r}
++ \frac{\overline{v}_\theta}{r}\frac{\partial \delta v_r}{\partial \theta}
++ \delta v_r \frac{d\overline{v}_r}{dr}
+- \frac{2\overline{v}_\theta}{r}\delta v_\theta
+= -\frac{1}{\rho}\frac{\partial \delta p}{\partial r}
+\tag{16}
+$$
+**步骤 2：无量纲化与频域变换**
+引入同样的无量纲变量
+$$
+\hat r = \frac{r}{R},\quad \tau = \frac{tU}{R},\quad
+\delta\hat{v}_r = \frac{\delta v_r}{U},\quad
+\delta\hat{v}_\theta = \frac{\delta v_\theta}{U},\quad
+\delta\hat{p} = \frac{\delta p}{\rho U^2},\quad
+\hat Q = \frac{Q}{UR},\quad
+\hat\Gamma = \frac{\Gamma}{UR}
+$$
+背景自由涡的无量纲形式：
+$$
+\hat{\overline{v}}_r = \frac{\hat Q}{\hat r},\qquad
+\hat{\overline{v}}_\theta = \frac{\hat\Gamma}{\hat r},\qquad
+\frac{d\hat{\overline{v}}_r}{d\hat r} = -\frac{\hat Q}{\hat r^2}
+$$
+对方程 (16) 进行无量纲化（密度直接被吃掉成1），并对时间作拉普拉斯变换（$\partial/\partial\tau \to s$），同时考虑轴对称扰动（$\partial/\partial\theta = 0$），得：
+$$
+s\,\delta\hat{V}_r
++ \hat{\overline{v}}_r \frac{d\delta\hat{V}_r}{d\hat r}
++ \delta\hat{V}_r \frac{d\hat{\overline{v}}_r}{d\hat r}
+- \frac{2\hat{\overline{v}}_\theta}{\hat r}\,\delta\hat{V}_\theta
+= -\frac{d\delta\hat{p}}{d\hat r}
+\tag{17}
+$$
+**步骤 3：代入 $n=0$ 的速度扰动**
+由 2.4 节，$n=0$ 时：
+$$
+\delta\hat{V}_r = \frac{\tilde{D}_0(s)}{\hat r},\qquad
+\delta\hat{V}_\theta = -\frac{\tilde{F}_0(s)\,\delta\tilde{J}_0(\hat r,s)}{\hat r}
+$$
+其中
+$$
+\delta\tilde{J}_0(\hat r,s) = \int_{\hat r_0}^{\hat r} e^{-\frac{s}{2\hat Q}\xi^2}\,\xi\,d\xi
+$$
+将上述表达式代入式 (17)，逐项计算：
+- $s\,\delta\hat{V}_r = \dfrac{s\tilde{D}_0}{\hat r}$
+- $\hat{\overline{v}}_r \dfrac{d\delta\hat{V}_r}{d\hat r} = \dfrac{\hat Q}{\hat r}\cdot\left(-\dfrac{\tilde{D}_0}{\hat r^2}\right) = -\dfrac{\hat Q\tilde{D}_0}{\hat r^3}$
+- $\delta\hat{V}_r \dfrac{d\hat{\overline{v}}_r}{d\hat r} = \dfrac{\tilde{D}_0}{\hat r}\cdot\left(-\dfrac{\hat Q}{\hat r^2}\right) = -\dfrac{\hat Q\tilde{D}_0}{\hat r^3}$
+- $-\dfrac{2\hat{\overline{v}}_\theta}{\hat r}\delta\hat{V}_\theta = -\dfrac{2(\hat\Gamma/\hat r)}{\hat r}\cdot\left(-\dfrac{\tilde{F}_0 \delta\tilde{J}_0}{\hat r}\right) = +\dfrac{2\hat\Gamma\tilde{F}_0 \delta\tilde{J}_0}{\hat r^3}$
+合并前三项，得到：
+$$
+\frac{s\tilde{D}_0}{\hat r} - \frac{2\hat Q\tilde{D}_0}{\hat r^3} + \frac{2\hat\Gamma\tilde{F}_0 \delta\tilde{J}_0}{\hat r^3}
+= -\frac{d\delta\hat{p}}{d\hat r}
+$$
+移项：
+$$
+\frac{d\delta\hat{p}}{d\hat r}
+= -\frac{s\tilde{D}_0}{\hat r} + \frac{2\hat Q\tilde{D}_0}{\hat r^3} - \frac{2\hat\Gamma\tilde{F}_0 \delta\tilde{J}_0}{\hat r^3}
+\tag{18}
+$$
+**步骤 4：将 $\delta\tilde{J}_0$ 写为显式指数形式**
+由涡量解已知：
+$$
+\delta\tilde{J}_0(\hat r,s) = \frac{\hat Q}{s}\left(e^{-\frac{s}{2\hat Q}\hat r_0^2} - e^{-\frac{s}{2\hat Q}\hat r^2}\right)
+$$
+代入式 (17)：
+$$
+\frac{d\delta\hat{p}}{d\hat r}
+= -\frac{s\tilde{D}_0}{\hat r}
++ \frac{2\hat Q\tilde{D}_0}{\hat r^3}
+- \frac{2\hat\Gamma\tilde{F}_0}{\hat r^3}\cdot\frac{\hat Q}{s}\left(e^{-\frac{s}{2\hat Q}\hat r_0^2} - e^{-\frac{s}{2\hat Q}\hat r^2}\right)
+$$
+展开：
+$$
+\frac{d\delta\hat{p}}{d\hat r}
+= -\frac{s\tilde{D}_0}{\hat r}
++ \frac{2\hat Q\tilde{D}_0}{\hat r^3}
+- \frac{2\hat\Gamma\hat Q}{s}\tilde{F}_0\frac{e^{-\frac{s}{2\hat Q}\hat r_0^2}}{\hat r^3}
++ \frac{2\hat\Gamma\hat Q}{s}\tilde{F}_0\frac{e^{-\frac{s}{2\hat Q}\hat r^2}}{\hat r^3}
+\tag{18'}
+$$
+
+其中第三项为与 $\hat r_0$ 有关的常数乘以了 $1/\hat r^3$，与第二项形式相同。将其合并进第二项，重新定义系数：
+$$
+\tilde{D}_0' = \tilde{D}_0 - \frac{\hat\Gamma}{s} e^{-\frac{s}{2\hat Q}\hat r_0^2} \tilde{F}_0
+$$
+则压力梯度简化为：
+$$
+\frac{d\delta\hat{p}}{d\hat r}
+= \left( \frac{2\hat Q}{\hat r^3} - \frac{s}{\hat r} \right) \tilde{D}_0'(s)
++ \frac{2\hat\Gamma}{\hat r^3 s \hat Q} e^{-\frac{s}{2\hat Q}\hat r^2} \tilde{F}_0(s)
+$$
+**步骤5：得到积分形式**
+对 $\hat r$ 从 $\hat r_0$ 到 $\hat r$ 积分，并将积分下限贡献和 $\delta\hat{p}(\hat r_0)$ 吸收进常数 $C_0(s)$，得：
+$$
+\delta\hat{p}(\hat r,s) = C_0(s) + \int_{\hat r_0}^{\hat r} \left[ \left( \frac{2\hat Q}{\xi^3} - \frac{s}{\xi} \right) \tilde{D}_0'(s) + \frac{2\hat\Gamma}{\xi^3 s \hat Q} e^{-\frac{s}{2\hat Q}\xi^2} \tilde{F}_0(s) \right] d\xi
+$$
+在传输矩阵中，常数 $C_0(s)$ 可吸收进 $\tilde{D}_0'$ 的重定义，因此只保留与 $\hat r$ 相关的积分部分。重新标记 $\tilde{D}_0' \to \tilde{D}_0$，并恢复压力符号为 $\delta\tilde{P}_0$，得：
+$$
+\boxed{
+\delta\tilde{P}_0(\hat r,s) = \int_{\hat r_0}^{\hat r} \left[ \left( \frac{2\hat Q}{\xi^3} - \frac{s}{\xi} \right) \tilde{D}_0(s) + \frac{2\hat\Gamma}{\xi^3 s \hat Q} e^{-\frac{s}{2\hat Q}\xi^2} \tilde{F}_0(s) \right] d\xi
 }
-$$
-## 2.5 传递矩阵
-### 2.5.1 构成
-**回顾之前的定义：**
-$$
-k_n = \frac{s}{\hat{\overline{v}}_x} + j n \frac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x},\qquad
-\lambda_A = s + n(\hat{\overline{v}}_x + j\hat{\overline{v}}_\theta),\qquad
-\lambda_B = s - n\hat{\overline{v}}_x + j n\hat{\overline{v}}_\theta
+\tag{19}
 $$
 
-**状态向量与系数向量的关系：**
+### 2.5.2 压力扰动推导（$n>0$）—— 基于周向动量方程与流函数
+对于 $n>0$ 的周向谐波扰动，压力扰动 $\delta\tilde{P}_n$ 可以通过线性化的**周向动量方程**直接导出，且结果可用频域流函数 $\delta\hat{\Psi}$ 的谐波分量 $\delta\tilde{\Psi}_n$ 及其导数表示，无需显式求速度。
+#### 线性化周向动量方程
+柱坐标系下，不可压无粘流动的周向动量方程为：
 $$
-\begin{pmatrix}
-\delta\hat{V}_x \\
-\delta\hat{V}_\theta \\
-\delta\hat{P}
-\end{pmatrix}(\hat{x},\hat{\theta},s)
-=
-\mathbb{T}_0(\hat{x},s)
-\begin{pmatrix}
-A_0(s) \\ C_0(s)
-\end{pmatrix}
-+
-\sum_{n=1}^{\infty}
-\mathbb{T}_n(\hat{x},s)
-\begin{pmatrix}
-A_n(s) \\ B_n(s) \\ C_n(s)
-\end{pmatrix}
-e^{j n \hat{\theta}}
-+
-\begin{pmatrix}
-0 \\ 0 \\ \delta\hat{P}_0(0) + \sum_{n=1}^{\infty} \delta\hat{P}_n(0)\,e^{j n \hat{\theta}}
-\end{pmatrix}
+\frac{\partial v_\theta}{\partial t} + v_r \frac{\partial v_\theta}{\partial r} + \frac{v_\theta}{r} \frac{\partial v_\theta}{\partial \theta} + \frac{v_r v_\theta}{r} = -\frac{1}{\rho r} \frac{\partial p}{\partial \theta}
 $$
+将流动分解为背景（上划线）与小扰动（$\delta$），代入并减去背景方程（背景定常、轴对称，$\partial\overline{p}/\partial\theta=0$），忽略二阶小量，得到线性化方程：
+$$
+\frac{\partial \delta v_\theta}{\partial t}
++ \overline{v}_r \frac{\partial \delta v_\theta}{\partial r}
++ \frac{\overline{v}_\theta}{r} \frac{\partial \delta v_\theta}{\partial \theta}
++ \delta v_r \frac{d\overline{v}_\theta}{dr}
++ \frac{\overline{v}_\theta}{r} \delta v_r
++ \frac{\overline{v}_r}{r} \delta v_\theta
+= -\frac{1}{\rho r} \frac{\partial \delta p}{\partial \theta}
+\tag{20}
+$$
+#### 无量纲化与拉普拉斯变换
 
-**矩阵 $\mathbb{T}_0$（轴对称，$n=0$）**
+回顾一下，记频域中的无量纲扰动量为：
 $$
-\mathbb{T}_0(\hat{x},s) =
-\begin{pmatrix}
-1 &0 \\\\
-0 & \displaystyle\frac{s}{\hat{\overline{v}}_x}\,e^{-k_0 \hat{x}}\\ \\
--s \hat{x} & 0\\
-\end{pmatrix},
-\qquad k_0 = \frac{s}{\hat{\overline{v}}_x}
+\delta\hat{V}_r(\hat r,\theta,s) = \mathcal{L}\{\delta\hat{v}_r\},\quad
+\delta\hat{V}_\theta(\hat r,\theta,s) = \mathcal{L}\{\delta\hat{v}_\theta\},\quad
+\delta\hat{P}(\hat r,\theta,s) = \mathcal{L}\{\delta\hat{p}\}
 $$
-这里$\frac{s}{\hat{\overline v}_x}$可以被$C_0$以重定义的方式吸收，于是有：
+同时，频域流函数扰动为 $\delta\hat{\Psi}(\hat r,\theta,s) = \mathcal{L}\{\delta\hat{\psi}\}$，且满足：
 $$
-\mathbb{T}_0(\hat{x},s) =
-\begin{pmatrix}
-1 &0 \\\\
-0 &e^{-k_0 \hat{x}}\\ \\
--s \hat{x} & 0\\
-\end{pmatrix},
-\qquad k_0 = \frac{s}{\hat{\overline{v}}_x}
+\delta\hat{V}_r = \frac{1}{\hat r}\frac{\partial \delta\hat{\Psi}}{\partial \theta},\qquad
+\delta\hat{V}_\theta = -\frac{\partial \delta\hat{\Psi}}{\partial \hat r}
 $$
+无量纲化后的周向动量方程（频域）为：
+$$
+s\,\delta\hat{V}_\theta
++ \hat{\overline{v}}_r \frac{\partial \delta\hat{V}_\theta}{\partial \hat r}
++ \frac{\hat{\overline{v}}_\theta}{\hat r} \frac{\partial \delta\hat{V}_\theta}{\partial \theta}
++ \delta\hat{V}_r \frac{d\hat{\overline{v}}_\theta}{d\hat r}
++ \frac{\hat{\overline{v}}_\theta}{\hat r} \delta\hat{V}_r
++ \frac{\hat{\overline{v}}_r}{\hat r} \delta\hat{V}_\theta
+= -\frac{1}{\hat r} \frac{\partial \delta\hat{P}}{\partial \theta}
+\tag{21}
+$$
+#### 代入谐波形式
 
-**矩阵 $\mathbb{T}_n$（非轴对称，$n\ge 1$）**
+对于第 $n>0$ 次空间谐波，设频域流函数扰动为：
 $$
-\mathbb{T}_n(\hat{x},s) =
-\begin{pmatrix}
-e^{n \hat{x}} & e^{-n \hat{x}} & e^{-k_n \hat{x}}\\
-j e^{n \hat{x}} & -j e^{-n \hat{x}} & \left(\displaystyle\frac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} - j\frac{s}{n\hat{\overline{v}}_x}\right) e^{-k_n \hat{x}} 
-\\-\displaystyle\frac{\lambda_A}{n}(e^{n \hat{x}}-1) & \displaystyle\frac{\lambda_B}{n}(e^{-n \hat{x}}-1) & 0
-\end{pmatrix}
+\delta\hat{\Psi}(\hat r,\theta,s) = \delta\tilde{\Psi}_n(\hat r,s) e^{jn\theta}
 $$
-> 积分常数 $\delta\hat{P}_n(0)$ 由边界条件确定，在构造两点间传递矩阵时会自动消去。
+其中波浪号 $\tilde{}$ 表示空间傅里叶系数，且 $\delta\tilde{\Psi}_n$ 本身仍是频域量（依赖 $s$）。则速度扰动和压力扰动的谐波分量为：
+$$
+\delta\hat{V}_r = \frac{1}{\hat r}\frac{\partial \delta\hat{\Psi}}{\partial \theta}
+= \frac{jn}{\hat r} \delta\tilde{\Psi}_n e^{jn\theta}, \qquad
+\delta\hat{V}_\theta = -\frac{\partial \delta\hat{\Psi}}{\partial \hat r}
+= -\frac{d\delta\tilde{\Psi}_n}{d\hat r} e^{jn\theta}, \qquad
+\delta\hat{P} = \delta\tilde{P}_n(\hat r,s) e^{jn\theta}
+$$
+代入方程 (21)，并利用背景自由涡 $\hat{\overline{v}}_r = \hat Q/\hat r$，$\hat{\overline{v}}_\theta = \hat\Gamma/\hat r$，$\frac{d\hat{\overline{v}}_\theta}{d\hat r} = -\hat\Gamma/\hat r^2$。各项计算如下（已约去公因子 $e^{jn\theta}$）：
+- $s\,\delta\hat{V}_\theta \to s\left(-\frac{d\delta\tilde{\Psi}_n}{d\hat r}\right)$
+- $\hat{\overline{v}}_r \frac{\partial \delta\hat{V}_\theta}{\partial \hat r} \to \frac{\hat Q}{\hat r} \left(-\frac{d^2\delta\tilde{\Psi}_n}{d\hat r^2}\right)$
+- $\frac{\hat{\overline{v}}_\theta}{\hat r} \frac{\partial \delta\hat{V}_\theta}{\partial \theta} \to \frac{\hat\Gamma/\hat r}{\hat r} \cdot (jn) \left(-\frac{d\delta\tilde{\Psi}_n}{d\hat r}\right) = -\frac{jn\hat\Gamma}{\hat r^2} \frac{d\delta\tilde{\Psi}_n}{d\hat r}$
+- $\delta\hat{V}_r \frac{d\hat{\overline{v}}_\theta}{d\hat r} \to \frac{jn}{\hat r}\delta\tilde{\Psi}_n \cdot \left(-\frac{\hat\Gamma}{\hat r^2}\right) = -\frac{jn\hat\Gamma}{\hat r^3} \delta\tilde{\Psi}_n$
+- $\frac{\hat{\overline{v}}_\theta}{\hat r} \delta\hat{V}_r \to \frac{\hat\Gamma/\hat r}{\hat r} \cdot \frac{jn}{\hat r}\delta\tilde{\Psi}_n = \frac{jn\hat\Gamma}{\hat r^3} \delta\tilde{\Psi}_n$
+- $\frac{\hat{\overline{v}}_r}{\hat r} \delta\hat{V}_\theta \to \frac{\hat Q/\hat r}{\hat r} \left(-\frac{d\delta\tilde{\Psi}_n}{d\hat r}\right) = -\frac{\hat Q}{\hat r^2} \frac{d\delta\tilde{\Psi}_n}{d\hat r}$
 
-这里，也可以通过设定压力参考点$x_0$压力为0，使矩阵非常简洁，只是要注意，这种形式下自由项是不需要加的：
+注意第四项与第五项互为相反数，**相互抵消**（物理上源于自由涡的角动量守恒）。将所有左边项合并，得到：
 $$
-\mathbb{T}_n(\hat{x},s) =
-\begin{pmatrix}
-e^{n \hat{x}} & e^{-n \hat{x}} & e^{-k_n \hat{x}}\\
-j e^{n \hat{x}} & -j e^{-n \hat{x}} & \left(\displaystyle\frac{\hat{\overline{v}}_\theta}{\hat{\overline{v}}_x} - j\frac{s}{n\hat{\overline{v}}_x}\right) e^{-k_n \hat{x}} 
-\\-\displaystyle\frac{\lambda_A}{n}e^{n \hat{x}} & \displaystyle\frac{\lambda_B}{n}e^{-n \hat{x}} & 0
-\end{pmatrix}
+- s \frac{d\delta\tilde{\Psi}_n}{d\hat r}
+- \frac{\hat Q}{\hat r} \frac{d^2\delta\tilde{\Psi}_n}{d\hat r^2}
+- \frac{jn\hat\Gamma}{\hat r^2} \frac{d\delta\tilde{\Psi}_n}{d\hat r}
+- \frac{\hat Q}{\hat r^2} \frac{d\delta\tilde{\Psi}_n}{d\hat r}
+= -\frac{jn}{\hat r} \delta\tilde{P}_n
 $$
-这是简化为了和论文对上，便于使用。
-# 3. 代码
+两边乘以 $-1$：
+$$
+s \frac{d\delta\tilde{\Psi}_n}{d\hat r}
++ \frac{\hat Q}{\hat r} \frac{d^2\delta\tilde{\Psi}_n}{d\hat r^2}
++ \left( \frac{jn\hat\Gamma}{\hat r^2} + \frac{\hat Q}{\hat r^2} \right) \frac{d\delta\tilde{\Psi}_n}{d\hat r}
+= \frac{jn}{\hat r} \delta\tilde{P}_n
+$$
+#### 解出 $\delta\tilde{P}_n$
+
+将左边提取公因子，并乘以 $\hat r/(jn)$，得：
+$$
+\delta\tilde{P}_n(\hat r,s) = \frac{\hat r}{jn} \left[ \frac{\hat Q}{\hat r} \frac{d^2\delta\tilde{\Psi}_n}{d\hat r^2}
++ \left( s + \frac{jn\hat\Gamma}{\hat r^2} + \frac{\hat Q}{\hat r^2} \right) \frac{d\delta\tilde{\Psi}_n}{d\hat r} \right]
+$$
+即：
+$$
+\boxed{
+\delta\tilde{P}_n(\hat r,s) = \frac{1}{jn} \left( \hat Q \frac{d^2\delta\tilde{\Psi}_n}{d\hat r^2}
++ \left( s\hat r + \frac{jn\hat\Gamma}{\hat r} + \frac{\hat Q}{\hat r} \right) \frac{d\delta\tilde{\Psi}_n}{d\hat r} \right)
+}
+\tag{21}
+$$
+其中 $\delta\tilde{\Psi}_n(\hat r,s)$ 是频域流函数扰动的第 $n$ 次空间谐波分量。
+## 2.6 传递矩阵 $\mathbb{T}_{\text{rad},n}$ 的推导
+径向空间背景为自由涡：$\hat{\overline{v}}_r = \hat Q / \hat r$，$\hat{\overline{v}}_\theta = \hat\Gamma / \hat r$。无量纲流函数 $\delta\hat{\Psi}$ 满足泊松方程，其通解由齐次势模态和旋转模态叠加而成（2.3节）。速度与流函数的关系为：
+$$
+\delta\hat{V}_r = \frac{1}{\hat r}\frac{\partial \delta\hat{\Psi}}{\partial \theta},\qquad
+\delta\hat{V}_\theta = -\frac{\partial \delta\hat{\Psi}}{\partial \hat r}
+$$
+压力扰动由动量方程导出：$n=0$ 时用径向动量方程积分；$n>0$ 时用周向动量方程。
+将第 $n$ 次谐波的流函数通解写为：
+$$
+\delta\tilde{\Psi}_n(\hat r,s) = \tilde{D}_n \hat r^{\,n} + \tilde{E}_n \hat r^{-n} + \tilde{F}_n \tilde{\mathcal{R}}_n(\hat r,s)
+$$
+其中 $\tilde{\mathcal{R}}_n$ 为特解积分。代入速度及压力表达式，整理系数即得传递矩阵（可以自己回代验证）。
+$$
+\begin{bmatrix}
+\delta \hat V_r \\[2pt]
+\delta \hat V_\theta \\[2pt]
+\delta \hat P
+\end{bmatrix}
+(\hat r,\hat\theta,s) 
+= 
+\mathbb{T}_{\text{rad},0} \cdot
+\begin{bmatrix}
+\tilde D_0(s) \\[2pt]
+\tilde F_0(s)
+\end{bmatrix}
+\;+\;
+\sum_{n=1}^{\infty} \mathbb{T}_{\text{rad},n} \cdot e^{jn\hat\theta}\cdot
+\begin{bmatrix}
+\tilde D_n(s) \\[2pt]
+\tilde E_n(s) \\[2pt]
+\tilde F_n(s)
+\end{bmatrix}
+$$
+### 一、$n = 0$（轴对称）
+状态向量 $[\delta\tilde{V}_{r0},\ \delta\tilde{V}_{\theta0},\ \delta\tilde{P}_0]^{\mathsf{T}}$，系数向量 $[\tilde{D}_0,\ \tilde{F}_0]^{\mathsf{T}}$（$\tilde{E}_0$ 不产生物理贡献）：
+$$
+\mathbb{T}_{\text{rad},0} =
+\begin{bmatrix}
+\dfrac{1}{\hat r} & 0 \\\\
+0 & \dfrac{\hat Q}{s\hat r}e^{-\frac{s}{2\hat Q}\hat r^2} \\\\
+-\dfrac{\hat Q}{\hat r^2} - s\ln\hat r & \dfrac{2\hat\Gamma}{s\hat Q}\tilde{\mathcal R}_0(\hat r,s)
+\end{bmatrix}
+$$
+其中 $\tilde{\mathcal R}_0(\hat r,s) = \displaystyle\int_{\hat r_0}^{\hat r} e^{-\frac{s}{2\hat Q}\xi^2}\,\xi^{-3}d\xi$，常数吸收进势流系数。
+### 二、$n > 0$
+状态向量 $[\delta\tilde{V}_{rn},\ \delta\tilde{V}_{\theta n},\ \delta\tilde{P}_n]^{\mathsf{T}}$，系数向量 $[\tilde{D}_n,\ \tilde{E}_n,\ \tilde{F}_n]^{\mathsf{T}}$：
+$$
+\mathbb{T}_{\text{rad},n} =
+\begin{bmatrix}
+jn\hat r^{\,n-1} & jn\hat r^{-n-1} & \dfrac{jn}{\hat r}\tilde{\mathcal{R}}_n \\
+-n\hat r^{\,n-1} & n\hat r^{-n-1} & -n\tilde{\mathcal{S}}_n \\
+\mathbb{T}_{31} & \mathbb{T}_{32} & \mathbb{T}_{33}
+\end{bmatrix}
+
+$$
+其中
+$$
+\begin{aligned}
+\mathbb{T}_{31} &= -js\hat r^{\,n} - jn(\hat Q + j\hat\Gamma)\hat r^{\,n-2},\\
+\mathbb{T}_{32} &= js\hat r^{-n} - jn(\hat Q - j\hat\Gamma)\hat r^{-n-2},\\
+\mathbb{T}_{33} &= \frac{1}{jn}\left( \hat Q \frac{d^2\tilde{\mathcal{R}}_n}{d\hat r^2}
++ \left( s\hat r + \frac{jn\hat\Gamma}{\hat r} + \frac{\hat Q}{\hat r} \right) \frac{d\tilde{\mathcal{R}}_n}{d\hat r} \right)
+\end{aligned}
+$$
+辅助函数 $$\tilde{\mathcal{S}}_n = \int_{\hat r_0}^{\hat r} e^{-\frac{s}{2\hat Q}\xi^2 - jn\frac{\hat\Gamma}{\hat Q}\ln\xi}
+\left( \hat r^{\,n-1}\xi^{-n+1} + \hat r^{-n-1}\xi^{\,n+1} \right) d\xi$$
+# 代码
 ```python
 import numpy as np
 
-def Tn_ax(x, s, n, Vx_bar, Vtheta_bar, x0=0.0):
+def rad_fun(r, s, n, r0, Q, G):
     """
-    轴向管道传递矩阵（n >= 1）
-    基于用户 .md 文件中的公式，显式包含参考点 x0。
-    将上游系数 [A_n; B_n; C_n] 映射到下游位置 x 处的扰动状态 [dVx; dVtheta; dP]
-    状态在 x0 处定义。
-
+    径向函数 R_n 及其导数，用于径向空间传递矩阵。
+    
     参数
     ----------
-    x : float
-        无量纲轴向坐标（目标位置）
+    r : float
+        当前半径（无量纲）
     s : complex
         拉普拉斯变量（无量纲）
     n : int
-        周向波数（n >= 1）
-    Vx_bar : float
-        无量纲平均轴向速度
-    Vtheta_bar : float
-        无量纲平均周向速度
-    x0 : float, optional
-        参考点坐标（状态定义的位置），默认为 0.0
-
+        周向波数（n >= 0）
+    r0 : float
+        参考半径（积分下限）
+    Q : float
+        流量常数（无量纲）
+    G : float
+        环量常数（无量纲）
+    
     返回
     -------
-    T : 3x3 numpy complex array
-        传递矩阵
+    y : list of complex
+        y[0] = R_n(r)
+        y[1] = dR_n/dr
+        y[2] = d2R_n/dr2
     """
-    # 定义辅助量
-    k_n = s / Vx_bar + 1j * n * Vtheta_bar / Vx_bar
-    lambda_A = s + n * (Vx_bar + 1j * Vtheta_bar)
-    lambda_B = s - n * Vx_bar + 1j * n * Vtheta_bar
+    N = 100  # 积分点数
+    xi = np.linspace(r0, r, N)
+    
+    # 被积函数
+    # fn = exp(-s/(2Q)*xi^2 - j n G/Q * log(xi)) * (r^n * xi^{-n+1} - r^{-n} * xi^{n+1})
+    # 注意：这里的 r 是常数（当前半径），xi 是积分变量
+    exp_arg = -s/(2*Q) * xi**2 - 1j * n * G / Q * np.log(xi)
+    integrand = np.exp(exp_arg) * (r**n * xi**(-n+1) - r**(-n) * xi**(n+1))
+    # 数值积分（梯形法）
+    Fp = np.trapz(integrand, xi)
+    
+    # 需要类似 Matlab 中的 Fn? 原始代码中 Fp 和 Fn 实际对应两个积分：
+    # 在原始代码中，为了计算 R_n，定义了 fp = exp(...)*x^(+n+1) 和 fn = exp(...)*x^(-n+1)
+    # 但上面的 integrand 已经正确包含了 r^n * xi^{-n+1} - r^{-n} * xi^{n+1}
+    # 然而原 Matlab 代码中使用了两个独立的积分 Fp 和 Fn，然后组合。
+    # 为了精确复现，这里采用与原代码相同的方法：
+    fp = np.exp(exp_arg) * xi**(+n+1)
+    fn = np.exp(exp_arg) * xi**(-n+1)
+    Fp_int = np.trapz(fp, xi)
+    Fn_int = np.trapz(fn, xi)
+    
+    # 原 Matlab 代码：
+    # Rn = r^n * Fn - r^{-n} * Fp
+    # dRn/dr = n*r^{n-1}*Fn + r^n*fn(N) + n*r^{-n-1}*Fp - r^{-n}*fp(N)
+    # d2Rn/dr2 = ...
+    # 其中 fn(N) 是 fn 在最后一个点（即 xi = r）的值，fp(N) 类似
+    fn_last = np.exp(exp_arg[-1]) * r**(-n+1)
+    fp_last = np.exp(exp_arg[-1]) * r**(+n+1)
+    
+    Rn = r**n * Fn_int - r**(-n) * Fp_int
+    dRn = n * r**(n-1) * Fn_int + r**n * fn_last + n * r**(-n-1) * Fp_int - r**(-n) * fp_last
+    
+    # 二阶导数（直接按原代码公式，注意原代码中 y(3) = ...，此处简化）
+    # 原代码中 y(3) 的计算较复杂，但我们可以通过数值差分或直接沿用原表达式。
+    # 为保持简洁，这里同样采用原代码的表达式（需确保符号正确）。
+    # 原 Matlab 代码：
+    # y(3) = (n^2 - n)*r^(+n-2)*Fn + 2*n*r^(+n-1)*fn(N) + r^(+n)*dfn ...
+    #        -(n^2+n)*r^(-n-2)*Fp + 2*n*r^(-n-1)*fp(N) - r^(-n)*dfp
+    # 其中 dfn, dfp 是在 r 处的导数。
+    # 我们需要计算 dfn = d/dr (exp(-s/(2Q)r^2 - j n G/Q ln r) * r^{-n+1}) 在 r 处的值
+    # 为简化，我们使用符号微分或直接数值求导。这里采用解析求导：
+    # 令 phi = -s/(2Q) r^2 - j n G/Q ln r
+    # 则 fn = exp(phi) * r^{-n+1}
+    # dfn/dr = exp(phi) * [ dphi/dr * r^{-n+1} + (-n+1) r^{-n} ]
+    # dphi/dr = -s r / Q - j n G/(Q r)
+    dphi_dr = -s * r / Q - 1j * n * G / (Q * r)
+    dfn = np.exp(exp_arg[-1]) * (dphi_dr * r**(-n+1) + (-n+1) * r**(-n))
+    dfp = np.exp(exp_arg[-1]) * (dphi_dr * r**(+n+1) + (+n+1) * r**(+n))
+    
+    d2Rn = (n**2 - n) * r**(n-2) * Fn_int + 2*n * r**(n-1) * fn_last + r**n * dfn \
+           - (n**2 + n) * r**(-n-2) * Fp_int + 2*n * r**(-n-1) * fp_last - r**(-n) * dfp
+    
+    return [Rn, dRn, d2Rn]
 
-    # 相对距离
-    dx = x - x0
 
-    # 指数项（相对于 x0）
-    exp_n_dx = np.exp(n * dx)          # e^{n (x-x0)}
-    exp_n_dx_neg = np.exp(-n * dx)     # e^{-n (x-x0)}
-    exp_kn_dx = np.exp(-k_n * dx)      # e^{-k_n (x-x0)}
-
-    # 矩阵第一行：dVx 各系数
-    row1 = [exp_n_dx, exp_n_dx_neg, exp_kn_dx]
-
-    # 矩阵第二行：dVtheta 各系数
-    coeff_vtheta_c = (Vtheta_bar / Vx_bar - 1j * s / (n * Vx_bar))
-    row2 = [1j * exp_n_dx, -1j * exp_n_dx_neg, coeff_vtheta_c * exp_kn_dx]
-
-    # 矩阵第三行：dP 各系数（积分从 x0 到 x）
-    term_A = -lambda_A / n * (exp_n_dx - 1.0)
-    term_B =  lambda_B / n * (exp_n_dx_neg - 1.0)
-    row3 = [term_A, term_B, 0.0]
-
-    T = np.array([row1, row2, row3], dtype=complex)
+def Tn_rad(r, s, n, r0, Q, G):
+    """
+    径向空间 n 阶谐波传递矩阵 (n >= 1)
+    
+    返回 3x3 复数矩阵，映射 [\tilde D_n; \tilde E_n; \tilde F_n] 到 [V_r; V_theta; P]
+    
+    参数
+    ----------
+    r : float
+        当前半径（无量纲）
+    s : complex
+        拉普拉斯变量
+    n : int
+        周向波数 (n >= 1)
+    r0 : float
+        参考半径（积分下限）
+    Q : float
+        流量常数（无量纲）
+    G : float
+        环量常数（无量纲）
+    """
+    # 获取径向函数及其导数
+    y = rad_fun(r, s, n, r0, Q, G)
+    Rn = y[0]
+    dRn = y[1]
+    # d2Rn = y[2]  # 如果需要可用于压力项，但原代码中压力项使用了更复杂的表达式
+    
+    # 构建传递矩阵
+    T = np.zeros((3, 3), dtype=complex)
+    
+    # 第一行：V_r 系数
+    T[0, 0] = 1j * n * r**(n-1)
+    T[0, 1] = 1j * n * r**(-n-1)
+    T[0, 2] = 1j * n * Rn / r
+    
+    # 第二行：V_theta 系数
+    T[1, 0] = -n * r**(n-1)
+    T[1, 1] = n * r**(-n-1)
+    T[1, 2] = -dRn
+    
+    # 第三行：压力系数（论文 (2.64) 的简化形式，实际压力需要用到 d2Rn）
+    # 原 Matlab 代码中的压力项比较繁琐，这里提供一种直接由周向动量方程导出的表达式
+    # 实际上，压力项可以通过下面的公式计算（与论文一致）：
+    # P = (1/(j n)) * ( Q * d2Rn + (s r + j n G/r + Q/r) * dRn )
+    d2Rn = y[2]  # 从 rad_fun 获取二阶导
+    term1 = Q * d2Rn
+    term2 = (s * r + 1j * n * G / r + Q / r) * dRn
+    T[2, 0] = -1j * s * r**n - 1j * n * (Q + 1j * G) * r**(n-2)
+    T[2, 1] = 1j * s * r**(-n) - 1j * n * (Q - 1j * G) * r**(-n-2)
+    T[2, 2] = (term1 + term2) / (1j * n)
+    
     return T
 
 
-def T0_ax(x, s, Vx_bar, x0=0.0):
+def T0_rad(r, s, r0, Q, G):
     """
-    轴向管道传递矩阵（n = 0），显式包含参考点 x0。
-    系数向量为 [A0(s); C0(s)]（大小为2），返回 3x2 矩阵。
+    径向空间轴对称传递矩阵 (n=0)
+    返回 3x2 矩阵，映射 [D0; F0] 到 [V_r; V_theta; P]
+    
+    参数
+    ----------
+    r : float
+        当前半径
+    s : complex
+        拉普拉斯变量
+    r0 : float
+        参考半径
+    Q : float
+        流量常数
+    G : float
+        环量常数
     """
-    k0 = s / Vx_bar
-    dx = x - x0
-    exp_k0_dx = np.exp(-k0 * dx)
-
-    # 第一行：dVx
-    row1 = [1.0, 0.0]   # Vx = A0
-    # 第二行：dVtheta
-    row2 = [0.0, (s / Vx_bar) * exp_k0_dx]
-    # 第三行：dP（积分从 x0 到 x）
-    row3 = [-s * dx, 0.0]
-
-    T = np.array([row1, row2, row3], dtype=complex)
+    # 辅助积分 J0 = ∫_{r0}^{r} exp(-s/(2Q) ξ^2) ξ dξ
+    # 解析形式: J0 = (Q/s) * (exp(-s/(2Q) r0^2) - exp(-s/(2Q) r^2))
+    J0 = (Q / s) * (np.exp(-s/(2*Q) * r0**2) - np.exp(-s/(2*Q) * r**2))
+    
+    # R0 = ∫_{r0}^{r} exp(-s/(2Q) ξ^2) ξ^{-3} dξ
+    # 数值积分
+    N = 100
+    xi = np.linspace(r0, r, N)
+    integrand_R0 = np.exp(-s/(2*Q) * xi**2) * xi**(-3)
+    R0 = np.trapz(integrand_R0, xi)
+    
+    T = np.zeros((3, 2), dtype=complex)
+    T[0, 0] = 1.0 / r
+    T[0, 1] = 0.0
+    T[1, 0] = 0.0
+    T[1, 1] = (Q / (r * s)) * np.exp(-s/(2*Q) * r**2)
+    T[2, 0] = -Q / r**2 - s * np.log(r)  # 注意原论文有 -s ln r 项，这里取 r0 为参考时需调整？
+    # 原论文 (2.63) 中压力第三行第一列为 -Q/r^2 - s ln r，第二列为 (2G/(sQ)) R0
+    T[2, 1] = (2 * G / (s * Q)) * R0
     return T
 
 
 # 使用示例
 if __name__ == "__main__":
     # 测试参数
-    x = 0.5
-    x0 = 0.2   # 显式指定参考点
+    r = 1.2
+    r0 = 1.0
     s = 0.1 + 0.2j
     n = 2
-    Vx_bar = 0.5
-    Vtheta_bar = 0.3
-
-    Tn = Tn_ax(x, s, n, Vx_bar, Vtheta_bar, x0)
-    print("n=2 传递矩阵（x0=0.2）:\n", Tn)
-
-    T0 = T0_ax(x, s, Vx_bar, x0)
-    print("\nn=0 传递矩阵（x0=0.2）:\n", T0)
+    Q = 0.5
+    G = 1.0
+    
+    Tn = Tn_rad(r, s, n, r0, Q, G)
+    print("Tn (n=2):\n", Tn)
+    
+    T0 = T0_rad(r, s, r0, Q, G)
+    print("\nT0 (n=0):\n", T0)
 ```
+
+[^1]: 当 $n\to 0$ 时，积分核中的括号内表达式：
+	$$
+	\hat{r}^n \xi^{-n+1} - \hat{r}^{-n} \xi^{n+1} \;\to\; \xi - \xi = 0
+	$$
+	出现 $0/0$ 型不定式（若保留分母 $2n$）。为此考虑极限：
+	
+	令 $A(n) = \hat{r}^n \xi^{-n+1} = \xi\,(\hat{r}/\xi)^n$，$B(n) = \hat{r}^{-n} \xi^{n+1} = \xi\,(\xi/\hat{r})^n$。
+	
+	则
+	$$
+	\frac{A(n)-B(n)}{2n} = \xi \cdot \frac{(\hat{r}/\xi)^n - (\xi/\hat{r})^n}{2n}
+	$$
+	利用 $(\hat{r}/\xi)^n = e^{n\ln(\hat{r}/\xi)} \approx 1 + n\ln(\hat{r}/\xi) + O(n^2)$，$(\xi/\hat{r})^n = e^{n\ln(\xi/\hat{r})} \approx 1 - n\ln(\hat{r}/\xi) + O(n^2)$。相减得 $2n\ln(\hat{r}/\xi) + O(n^3)$，除以 $2n$ 后极限为 $\ln(\hat{r}/\xi) = \ln\hat{r} - \ln\xi$。
+	
+	因此：
+	$$
+	\lim_{n\to0} \frac{\hat{r}^n \xi^{-n+1} - \hat{r}^{-n} \xi^{n+1}}{2n} = \xi\,(\ln\hat{r} - \ln\xi)
+	$$
+	代入 $n>0$ 特解表达式（保留分母 $2n$），并令 $\tilde{F}_0(s) = \lim_{n\to0} \tilde{F}_n(s)$，得到：
+	$$
+	\delta\hat{\Psi}_{p,0} = \tilde{F}_0(s) \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \cdot \xi\,(\ln\hat{r} - \ln\xi) \, d\xi
+	$$
