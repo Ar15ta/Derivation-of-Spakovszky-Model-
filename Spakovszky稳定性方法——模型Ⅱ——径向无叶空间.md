@@ -318,13 +318,13 @@ $$
 \begin{aligned}
 \delta\hat{\Psi}(\hat{r},\hat{\theta},s) = &\ \tilde{D}_0(s)\,\hat{\theta} \\
 &+ \sum_{n=1}^{\infty} \Bigl[ \tilde{D}_n(s)\,\hat{r}^{n} + \tilde{E}_n(s)\,\hat{r}^{-n} \Bigr] e^{j n \hat{\theta}} \\
-&+ \tilde{F}_0(s)\,\delta\tilde{\mathcal{I}}_0(\hat{r},s) \\
+&+ \tilde{F}_0(s)\,\tilde{\mathcal{I}}_0(\hat{r},s) \\
 &+ \sum_{n=1}^{\infty} \tilde{F}_n(s)\,\tilde{\mathcal{R}}_n(\hat{r},s)\; e^{j n \hat{\theta}}
 \end{aligned}
 $$
 其中辅助函数：
 $$
-\delta\tilde{\mathcal{I}}_0(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \cdot \xi\,(\ln \hat{r} - \ln \xi) \, d\xi,
+\tilde{\mathcal{I}}_0(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \cdot \xi\,(\ln \hat{r} - \ln \xi) \, d\xi,
 $$
 $$
 \tilde{\mathcal{R}}_n(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( \hat{r}^{n} \xi^{-n+1} - \hat{r}^{-n} \xi^{n+1} \right) d\xi.
@@ -356,15 +356,15 @@ $$
 $$
 **(c) 第三项（$n=0$ 特解）**：
 $$
-\frac{\partial}{\partial \hat{r}}\bigl[ \tilde{F}_0 \delta\tilde{\mathcal{I}}_0 \bigr] = \tilde{F}_0 \frac{\partial \delta\tilde{\mathcal{I}}_0}{\partial \hat{r}}.
+\frac{\partial}{\partial \hat{r}}\bigl[ \tilde{F}_0 \tilde{\mathcal{I}}_0 \bigr] = \tilde{F}_0 \frac{\partial \tilde{\mathcal{I}}_0}{\partial \hat{r}}.
 $$
 由莱布尼茨法则：
 $$
-\frac{\partial \delta\tilde{\mathcal{I}}_0}{\partial \hat{r}} = e^{-\frac{s}{2\hat{Q}}\hat{r}^2} \hat{r} (\ln \hat{r} - \ln \hat{r}) + \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi \cdot \frac{1}{\hat{r}} d\xi = \frac{1}{\hat{r}} \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi d\xi \equiv \frac{\delta\tilde{J}_0(\hat{r},s)}{\hat{r}},
+\frac{\partial \delta\tilde{\mathcal{I}}_0}{\partial \hat{r}} = e^{-\frac{s}{2\hat{Q}}\hat{r}^2} \hat{r} (\ln \hat{r} - \ln \hat{r}) + \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi \cdot \frac{1}{\hat{r}} d\xi = \frac{1}{\hat{r}} \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi d\xi \equiv \frac{\tilde{J}_0(\hat{r},s)}{\hat{r}},
 $$
 其中定义
 $$
-\delta\tilde{J}_0(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi d\xi = \frac{\hat{Q}}{s}\left( e^{-\frac{s}{2\hat{Q}}\hat{r}_0^2} - e^{-\frac{s}{2\hat{Q}}\hat{r}^2} \right) \quad (s \neq 0).
+\tilde{J}_0(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2} \xi d\xi = \frac{\hat{Q}}{s}\left( e^{-\frac{s}{2\hat{Q}}\hat{r}_0^2} - e^{-\frac{s}{2\hat{Q}}\hat{r}^2} \right) \quad (s \neq 0).
 $$
 **(d) 第四项（$n\ge1$ 特解）**：
 $$
@@ -372,11 +372,11 @@ $$
 $$
 $\tilde{\mathcal{R}}_n$ 的定义中，被积函数显含 $\hat{r}$ 于括号内。求导时，上限代入的边界项相消（因为 $\hat{r}^n \hat{r}^{-n+1} - \hat{r}^{-n} \hat{r}^{n+1}=0$），故只需对括号内求导：
 $$
-\frac{\partial \tilde{\mathcal{R}}_n}{\partial \hat{r}} = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( n \hat{r}^{n-1} \xi^{-n+1} + n \hat{r}^{-n-1} \xi^{n+1} \right) d\xi = n \delta\tilde{\mathcal{S}}_n(\hat{r},s),
+\frac{\partial \tilde{\mathcal{R}}_n}{\partial \hat{r}} = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( n \hat{r}^{n-1} \xi^{-n+1} + n \hat{r}^{-n-1} \xi^{n+1} \right) d\xi = n \tilde{\mathcal{S}}_n(\hat{r},s),
 $$
 其中
 $$
-\delta\tilde{\mathcal{S}}_n(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( \hat{r}^{n-1} \xi^{-n+1} + \hat{r}^{-n-1} \xi^{n+1} \right) d\xi.
+\tilde{\mathcal{S}}_n(\hat{r},s) = \int_{\hat{r}_0}^{\hat{r}} e^{-\frac{s}{2\hat{Q}}\xi^2 - j n \frac{\hat{\Gamma}}{\hat{Q}} \ln \xi} \left( \hat{r}^{n-1} \xi^{-n+1} + \hat{r}^{-n-1} \xi^{n+1} \right) d\xi.
 $$
 现在将以上导数组合成 $-\partial\delta\hat{\Psi}/\partial\hat{r}$：
 $$
@@ -385,7 +385,7 @@ $$
 整理得：
 $$
 \boxed{
-\delta\hat{V}_\theta(\hat{r},\hat{\theta},s) = -\frac{\tilde{F}_0(s) \delta\tilde{J}_0(\hat{r},s)}{\hat{r}} - \sum_{n=1}^{\infty} n \Bigl[ \tilde{D}_n(s) \hat{r}^{n-1} - \tilde{E}_n(s) \hat{r}^{-n-1} + \tilde{F}_n(s) \delta\tilde{\mathcal{S}}_n(\hat{r},s) \Bigr] e^{j n \hat{\theta}}.
+\delta\hat{V}_\theta(\hat{r},\hat{\theta},s) = -\frac{\tilde{F}_0(s) \tilde{J}_0(\hat{r},s)}{\hat{r}} - \sum_{n=1}^{\infty} n \Bigl[ \tilde{D}_n(s) \hat{r}^{n-1} - \tilde{E}_n(s) \hat{r}^{-n-1} + \tilde{F}_n(s) \tilde{\mathcal{S}}_n(\hat{r},s) \Bigr] e^{j n \hat{\theta}}.
 }\tag{15}
 $$
 ## 2.5 压力扰动推导
@@ -557,7 +557,7 @@ $$
 $$
 \delta\hat{\Psi}(\hat r,\theta,s) = \delta\tilde{\Psi}_n(\hat r,s) e^{jn\theta}
 $$
-其中波浪号 $\delta\tilde{}$ 表示空间傅里叶系数，且 $\delta\tilde{\Psi}_n$ 本身仍是频域量（依赖 $s$）。则速度扰动和压力扰动的谐波分量为：
+其中波浪号 $\tilde{}$ 表示空间傅里叶系数，且 $\delta\tilde{\Psi}_n$ 本身仍是频域量（依赖 $s$）。则速度扰动和压力扰动的谐波分量为：
 $$
 \delta\hat{V}_r = \frac{1}{\hat r}\frac{\partial \delta\hat{\Psi}}{\partial \theta}
 = \frac{jn}{\hat r} \delta\tilde{\Psi}_n e^{jn\theta}, \qquad
@@ -668,7 +668,7 @@ $$
 + \left( s\hat r + \frac{jn\hat\Gamma}{\hat r} + \frac{\hat Q}{\hat r} \right) \frac{d\tilde{\mathcal{R}}_n}{d\hat r} \right)
 \end{aligned}
 $$
-辅助函数 $$\delta\tilde{\mathcal{S}}_n = \int_{\hat r_0}^{\hat r} e^{-\frac{s}{2\hat Q}\xi^2 - jn\frac{\hat\Gamma}{\hat Q}\ln\xi}
+辅助函数 $$\tilde{\mathcal{S}}_n = \int_{\hat r_0}^{\hat r} e^{-\frac{s}{2\hat Q}\xi^2 - jn\frac{\hat\Gamma}{\hat Q}\ln\xi}
 \left( \hat r^{\,n-1}\xi^{-n+1} + \hat r^{-n-1}\xi^{\,n+1} \right) d\xi$$
 # 代码
 ```python
