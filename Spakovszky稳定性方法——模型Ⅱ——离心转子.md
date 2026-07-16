@@ -21,82 +21,8 @@
 ***
 # 主体
 ![[Spakovszky稳定性方法——模型Ⅱ——离心转子配图.png]]
-# 1. 相对涡量的导出
-设叶轮以恒定角速度 $\boldsymbol{\Omega} = \Omega\,\hat{\mathbf{e}}_x$ 绕 $x$ 轴旋转（轴向）。在旋转坐标系中，绝对速度 $\mathbf{v}$ 与相对速度 $\mathbf{w}$ 的关系为：
-$$
-\mathbf{v} = \mathbf{w} + \boldsymbol{\Omega} \times \mathbf{r}
-$$
-对等式两边取旋度（在绝对坐标系中运算）：
-$$
-\nabla \times \mathbf{v} = \nabla \times \mathbf{w} + \nabla \times (\boldsymbol{\Omega} \times \mathbf{r})
-$$
-利用矢量恒等式 $\nabla \times (\boldsymbol{\Omega} \times \mathbf{r}) = 2\boldsymbol{\Omega}$（$\boldsymbol{\Omega}$ 为常矢量），得：
-$$
-\boldsymbol{\omega}_a = \boldsymbol{\omega}_r + 2\boldsymbol{\Omega}
-$$
-其中 $\boldsymbol{\omega}_a = \nabla \times \mathbf{v}$，$\boldsymbol{\omega}_r = \nabla \times \mathbf{w}$。
-**进口条件**：假设叶轮上游流动无旋、无粘、不可压，则绝对涡量守恒且初始为零，故 $\boldsymbol{\omega}_a = \mathbf{0}$ 在整个流场成立。
-代入上式：
-$$
-\mathbf{0} = \boldsymbol{\omega}_r + 2\boldsymbol{\Omega}
-\quad\Rightarrow\quad
-\boldsymbol{\omega}_r = -2\boldsymbol{\Omega}
-$$
-取轴向分量（$x$ 方向）：
-$$
-\boxed{\omega_x = -2\Omega} \tag{1}
-$$
-# 2. Stodola 滑移模型
-## 2.1 假想涡与滑移速度
-Stodola 假设在叶片出口处存在一个**假想的刚体旋转涡**（eddy），直径等于出口通道宽度 $b$，涡量为 $\omega_x$。涡边缘的周向速度 $v_p$ 满足：
-$$
-v_p \cdot (\text{周长}) = \omega_x \cdot (\text{面积})
-$$
-取周长为 $\pi b$，面积为 $\pi (b/2)^2 = \pi b^2/4$，得：
-$$
-v_p \cdot \pi b = \omega_x \cdot \frac{\pi b^2}{4}
-\quad\Rightarrow\quad
-v_p = \frac{\omega_x b}{4}
-$$
-**滑移速度** $v_s$ 定义为该边缘速度，方向与旋转相反：
-$$
-v_s = v_p = \frac{\omega_x b}{4}
-$$
-## 2.2 通道宽度几何关系
-从叶轮出口几何配图看，可得通道宽度：
-$$
-b = \frac{2\pi R_2}{N} \cos \chi_2 \tag{2}
-$$
-其中 $2\pi R_2/N$ 为叶片间距，乘以 $\cos\chi_2$ 得到垂直于叶片的实际宽度。
-## 2.3 代入相对涡量
-将 $\omega_x = -2\Omega$ 和 $b$ 代入 $v_s$：
-$$
-v_s = \frac{-2\Omega}{4} \cdot \frac{2\pi R_2}{N} \cos \chi_2
-      = -\frac{\pi \Omega R_2}{N} \cos \chi_2
-      = -\pi U_2 \frac{\cos \chi_2}{N}
-$$
-负号表示 $v_s$ 与 $U_2$ 方向相反。
-## 2.4 滑移因子定义
-滑移因子定义为：
-$$
-\sigma_W = \frac{v_{\theta 2}}{U_2}
-$$
-实际出口绝对切向速度 $v_{\theta 2} = U_2 + v_s$，因此：
-$$
-\sigma_W = 1 + \frac{v_s}{U_2}
-      = 1 - \frac{\pi \cos \chi_2}{N} \tag{3}
-$$
-此即 **Stodola 滑移因子公式**。
-## 2.5 常用滑移因子公式
-这里既然已经通过滑移因子的方式把后掠角的影响考虑进来，后面
 
-| 作者      | 公式                                                  | 适用范围                        |
-| ------- | --------------------------------------------------- | --------------------------- |
-| Stodola | $\sigma_W = 1 - \dfrac{\pi \cos\chi_2}{N}$          | 小后弯角（$\chi_2 \le 45^\circ$） |
-| Wiesner | $\sigma_W = 1 - \dfrac{\sqrt{\cos\chi_2}}{N^{0.7}}$ | 广泛适用，经验拟合                   |
-| Stanitz | $\sigma_W = 1 - \dfrac{1.98}{N}$                    | 径向叶片（$\chi_2 = 0^\circ$）    |
-
-# 3.旋转总压守恒
+# 1.旋转总压守恒
 假设旋转总压（Rotary Stagnation Pressure）
 $$
 p^* = p_t - \rho \Omega R v_\theta
@@ -118,9 +44,9 @@ $$
 $$
 注意到 $\frac{v_{\theta2}}{\Omega R_2} = \frac{v_{\theta2}}{U_2}$，正是出口处的无量纲切向速度，记作 $\hat v_{\theta2}$；同样 $\frac{ v_{\theta1}}{\Omega R_2} = \frac{v_{\theta1}}{U_2}$ 也是无量纲量，记作 $\hat v_{\theta1}$。因此：
 $$
-\boxed{\hat \psi_I = \hat v_{\theta 2} - \frac{R_1}{R_2} \hat v_{\theta 1}}\tag{4}
+\boxed{\hat \psi_I = \hat v_{\theta 2} - \frac{R_1}{R_2} \hat v_{\theta 1}}\tag{1}
 $$
-# 4. 非定常总压降
+# 2. 非定常总压降
 在离心叶轮中，叶片通道长且弯曲，流体微团沿流线运动时存在明显的非定常加速度。这部分加速度对应的惯性力需要由叶片做功来提供（或反之，阻碍流动变化），表现为总压的额外变化。该修正用于连接 **稳态等熵总压升**（由欧拉方程给出）与 **实际总压升**（计入损失和非定常惯性）。
 
 在 **相对坐标系** 中，沿一条流线 $s$（从进口 $s1$ 到出口 $s2$）积分非定常加速度，得到的总压降为：
@@ -131,7 +57,7 @@ $$
 - $W$ —— 相对速度的大小（有量纲，$\text{m/s}$）；
 - $\tau = t \, U_2 / R_2$ —— 无量纲时间，以叶轮出口轮缘速度 $U_2 = \Omega R_2$ 和出口半径 $R_2$ 为参考；
 - $\frac{\partial}{\partial\tau}\big|_{\text{rel}}$ —— 在旋转坐标系中观察的当地时间导数。
-## 4.1 坐标变换：绝对坐标系中的表达
+# 3 坐标变换：绝对坐标系中的表达
 在小扰动分析中，扰动通常是在**绝对坐标系**中描述的。旋转坐标系与绝对坐标系的时间导数关系为：
 $$
 \frac{\partial}{\partial\tau}\bigg|_{\text{rel}} = \frac{\partial}{\partial t}\bigg|_{\text{abs}} + \Omega \frac{\partial}{\partial\theta}\bigg|_{\text{abs}}
@@ -145,12 +71,12 @@ $$
 因此，非定常惯性总压降可写作：
 $$
 \boxed{
-\Delta P_{t,\text{unsteady}} = -\int_{\hat s_1}^{\hat s_2} \left( \frac{\partial}{\partial\tau} + \frac{\partial}{\partial\hat\theta} \right) \hat W \, d\hat s \tag{5}
+\Delta P_{t,\text{unsteady}} = -\int_{\hat s_1}^{\hat s_2} \left( \frac{\partial}{\partial\tau} + \frac{\partial}{\partial\hat\theta} \right) \hat W \, d\hat s \tag{2}
 }
 $$
 
 在离心叶轮中，我们希望将分布积分简化为一个集总表达式，仅依赖于 **出口径向速度 $V_{r2}$**（无量纲）。这需要利用 **质量守恒（连续性方程）** 沿流管建立 $W(s)$ 与 $V_{r2}$ 的关系。
-## 4.2 流管视角
+# 4 流管视角
 基本假设：
 - 流动沿流管一维化（截面上参数均匀）
 - 流管截面积 $A(s)$ 定义为 **垂直于当地流线** 的横截面积
@@ -159,7 +85,7 @@ $$
 
 通过流管任意截面的 **质量流量** 为常数：
 $$
-\dot m = \rho(s) \, W(s) \, A(s) = \text{常数} \tag{6}
+\dot m = \rho(s) \, W(s) \, A(s) = \text{常数} \tag{3}
 $$
 其中：
 - $W(s)$ —— 相对速度的大小（方向沿流线，因而垂直于 $A(s)$）
@@ -168,7 +94,7 @@ $$
 
 在叶轮 **出口**（下标 2），我们通常采用 **径向截面**（法向沿径向）来度量流量。径向截面的质量为：
 $$
-\dot m = \rho_2 \, V_{r2} \, A_{2,\text{radial}} \tag{7}
+\dot m = \rho_2 \, V_{r2} \, A_{2,\text{radial}} \tag{4}
 $$
 其中：
 - $V_{r2}$ —— 出口径向速度
@@ -177,19 +103,19 @@ $$
 由于质量守恒，式 (1) 与 (2) 相等：
 
 $$
-\rho(s) \, W(s) \, A(s) = \rho_2 \, v_{r2} \, A_{2,\text{radial}} \tag{8}
+\rho(s) \, W(s) \, A(s) = \rho_2 \, v_{r2} \, A_{2,\text{radial}} \tag{5}
 $$
 解得：
 $$
-W(s) = \frac{\rho_2 \, A_{2,\text{radial}}}{\rho(s) \, A(s)} \, v_{r2} \tag{9}
+W(s) = \frac{\rho_2 \, A_{2,\text{radial}}}{\rho(s) \, A(s)} \, v_{r2} \tag{6}
 $$
 定义 **面积‑密度比** 沿流线的分布，跟前面的系列不一样，这里$s$不是拉普拉斯变量，而是相对流线位置：
 $$
-AR(s) \equiv \frac{\rho_2 \, A_{2,\text{radial}}}{\rho(s) \, A(s)} \tag{10}
+AR(s) \equiv \frac{\rho_2 \, A_{2,\text{radial}}}{\rho(s) \, A(s)} \tag{7}
 $$
 顺带地把无量纲表达式给出来：
 $$
-\boxed{\hat W(s) = AR(\hat s) \cdot \hat v_{r2}} \tag {11}
+\boxed{\hat W(s) = AR(\hat s) \cdot \hat v_{r2}} \tag {8}
 $$
 代回式(5)：
 $$
@@ -204,7 +130,7 @@ $$
 为了搞定这个积分，我们令：
 
 $$
-\lambda_{\text{imp}} = \int_{\hat s_1}^{\hat s_2} AR(\hat s) \, d\hat s \tag{12}
+\lambda_{\text{imp}} = \int_{\hat s_1}^{\hat s_2} AR(\hat s) \, d\hat s \tag{9}
 $$
 设：
 $$
@@ -214,7 +140,7 @@ $$
 
 将 $\rho(s)A(s)$ 代入 $AR(s)$ 表达式：
 $$
-AR(s) = \frac{\rho_2 A_{2,\text{radial}}}{\rho_1 A_{1} + k\,(s - s_1)} \tag{13}
+AR(s) = \frac{\rho_2 A_{2,\text{radial}}}{\rho_1 A_{1} + k\,(s - s_1)} \tag{10}
 $$
 使用换元法，令 $\xi = s - s_1$，则 $\xi \in [0, s_{\text{imp}}]$，分母记作 $a + k\xi$，其中$a = \rho_1 A_{1}$：
 
@@ -234,7 +160,7 @@ $$
 将 $k = \frac{\rho_2 A_{2,\text{radial}} - \rho_1 A_{1}}{s_{\text{imp}}}$ 代入：
 
 $$
-\lambda_{\text{imp}} = \rho_2 A_{2,\text{radial}} \cdot \frac{s_{\text{imp}}}{\rho_2 A_{2,\text{radial}} - \rho_1 A_{1}} \cdot \ln\left( \frac{\rho_2 A_{2,\text{radial}}}{\rho_1 A_{1}} \right)\tag{14}
+\lambda_{\text{imp}} = \rho_2 A_{2,\text{radial}} \cdot \frac{s_{\text{imp}}}{\rho_2 A_{2,\text{radial}} - \rho_1 A_{1}} \cdot \ln\left( \frac{\rho_2 A_{2,\text{radial}}}{\rho_1 A_{1}} \right)\tag{11}
 $$
 
 定义 **总面积‑密度比**（进口到出口）：
@@ -243,7 +169,7 @@ AR_{\text{imp}} = \frac{\rho_2 A_{2,\text{radial}}}{\rho_1 A_{1}}
 $$
 代入上式：
 $$
-\lambda_{\text{imp}} = s_{\text{imp}} \cdot \frac{AR_{\text{imp}} \ln(AR_{\text{imp}})}{AR_{\text{imp}} - 1}\tag{15}
+\lambda_{\text{imp}} = s_{\text{imp}} \cdot \frac{AR_{\text{imp}} \ln(AR_{\text{imp}})}{AR_{\text{imp}} - 1}\tag{12}
 $$
 所以:
 $$
@@ -258,26 +184,26 @@ $$
 # 5. 匹配条件
 由连续性得到：
 $$
-\hat v_{x1}=AR_{\text{imp}}\hat v_{r2}\tag{16}
+\hat v_{x1}=AR_{\text{imp}}\hat v_{r2}\tag{13}
 $$
 由滑移因子得到：
 $$
-\hat v_{\theta2}=\sigma_W+\hat v_{r2}\cdot\tan\chi_2=1+\hat v_{r2}\cdot tan\beta_2\tag{17}
+\hat v_{\theta2}=\sigma_W+\hat v_{r2}\cdot\tan\chi_2=1+\hat v_{r2}\cdot tan\beta_2\tag{14}
 $$
 这里的1是因为圆周速度$R_2\Omega$被归一化了(这里的归一化标准也和前面几份文档的不一样，使用时务必统一），还有注意金属角和气流角不同。
 
 结合式(4)和式(17)，考虑上我们的损失和非定常需要的额外总压降，我们有：
 $$
-\hat p_{t2}-\hat p_{t1}=1+\hat v_{r2}\cdot\tan\beta_2-\frac{R1}{R2}\hat v_{x1}\cdot \tan\alpha_1 -\hat l_{imp} -\lambda_{imp}\left( \frac{\partial}{\partial\tau} + \frac{\partial}{\partial\theta} \right)\hat v_{r2}\tag{18}
+\hat p_{t2}-\hat p_{t1}=1+\hat v_{r2}\cdot\tan\beta_2-\frac{R1}{R2}\hat v_{x1}\cdot \tan\alpha_1 -\hat l_{imp} -\lambda_{imp}\left( \frac{\partial}{\partial\tau} + \frac{\partial}{\partial\theta} \right)\hat v_{r2}\tag{15}
 $$
 
 和轴流转子一样，这里的损失可以表示成：
 $$
-\left[1+\tau_{imp }\cdot\left(\frac{\partial}{\partial \tau}+\frac{\partial}{\partial\hat\theta}\right)\right]\hat l_{imp}=l_{imp}^{ss}(tan\beta_1)\tag{19}
+\left[1+\tau_{imp }\cdot\left(\frac{\partial}{\partial \tau}+\frac{\partial}{\partial\hat\theta}\right)\right]\hat l_{imp}=l_{imp}^{ss}(tan\beta_1)\tag{16}
 $$
 类似地，这里的一阶迟滞估算由下式给出：
 $$
-\tau_{imp}=\tau_u\cdot\frac{2s_{imp}}{\hat{W}_1+\hat{W}_2}\tag{20}
+\tau_{imp}=\tau_u\cdot\frac{2s_{imp}}{\hat{W}_1+\hat{W}_2}\tag{17}
 $$
 # 6. 小扰动
 ## 6.1 传递式展开
