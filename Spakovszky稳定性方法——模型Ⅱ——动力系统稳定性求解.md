@@ -6,7 +6,7 @@
 # $n>0$
 ## 1. 无量纲基准约定
 - **特征速度** $U$：取系统中**转子**的特征速度。  
-  - 若系统包含**离心转子**：$U = U_2 = \Omega R_2$（叶轮出口中径切线速度）。  
+  - 若系统包含**离心转子**：$U = U_2 = \Omega R_2$（叶轮出口切线速度）。  
   - 若系统为纯轴流：$U = \Omega R$（平均半径处切线速度）。  
 - **特征长度** $R$：与 $U$ 对应，取同一半径（离心时用 $R_2$，轴流时用平均半径）。  
 - **特征密度** $\rho$：进口密度（常数）。  
@@ -17,7 +17,7 @@
   - 压力：$\hat p = p/(\rho U^2)$  
   - 拉普拉斯变量：$s$ 对应 $\partial/\partial\tau \to s$
 
-**注意**：上下游轴向管道内的平均速度 $\overline{V}_x, \overline{V}_\theta$ 也采用同一 $U$ 无量纲化。若管道内平均速度源于叶轮出口参数，则须预先转换。
+**注意**：上下游轴向管道内的平均速度 $\hat{\overline{v}}_x, \hat{\overline{v}}_\theta$ 也采用同一 $U$ 无量纲化。若管道内平均速度源于叶轮出口参数，则须预先转换。
 ## 2. 部件输入与输出参数
 
 每个部件均以**入口状态向量**映射到**出口状态向量**。状态向量的分量按部件类型选取（轴向或径向速度）。
@@ -25,14 +25,14 @@
 - **输入**：系数向量 $\mathbf{c}_n = [A_n, B_n, C_n]^{\mathsf T}$（定义在入口 $\hat x=0$ 处）。  
 - **输出**：状态向量 $\mathbf{q}_n(\hat x) = [\delta\tilde V_x, \delta\tilde V_\theta, \delta\tilde P]^{\mathsf T}$ 在任意 $\hat x$ 处。  
 - **传递矩阵**：$\mathbf{q}_n(\hat x) = \mathbb{T}_{\text{ax},n}(\hat x) \cdot \mathbf{c}_n$（无参考点形式，入口为 0）。  
-- **所需参数**：管道长度 $L/R$，背景速度 $\overline{V}_x, \overline{V}_\theta$（常数）。
+- **所需参数**：管道长度 $L/R$，背景速度 $\hat{\overline{v}}_x, \hat{\overline{v}}_\theta$（常数）。
 ### 2.2 轴流转子（`Axial Rotor`）
 - **输入**：入口状态向量 $\mathbf{q}_{\text{in}} = [\delta\tilde V_{x1}, \delta\tilde V_{\theta1}, \delta\tilde P_1]^{\mathsf T}$。  
 - **输出**：出口状态向量 $\mathbf{q}_{\text{out}} = [\delta\tilde V_{x2}, \delta\tilde V_{\theta2}, \delta\tilde P_2]^{\mathsf T}$。  
 - **传递矩阵**：$\mathbf{q}_{\text{out}} = \mathbb{B}_{\text{rot},n}(s) \cdot \mathbf{q}_{\text{in}}$。  
 - **所需参数**：
   - 几何：$\tan\beta_2$（出口相对气流角）、$\lambda_{\text{rot}}$（惯性系数）、$\tau_R$（损失滞后）  
-  - 背景流：$\overline{V}_x, \overline{V}_{\theta1}, \overline{V}_{\theta2}, \tan\beta_1, \tan\alpha_1$  
+  - 背景流：$\hat{\overline{v}}_x, \hat{\overline{v}}_{\theta1}, \hat{\overline{v}}_{\theta2}, \tan\beta_1, \tan\alpha_1$  
   - 损失导数：$\left.\frac{d\hat{l}_R^{ss}}{d\tan\beta_1}\right|_{\text{avg}}$（工作点值）
 ### 2.3 离心转子（`Centrifugal Impeller`）
 - **输入**：入口状态向量 $\mathbf{q}_{\text{in}} = [\delta\tilde V_{x1}, \delta\tilde V_{\theta1}, \delta\tilde P_1]^{\mathsf T}$（轴向）。  
@@ -40,13 +40,13 @@
 - **传递矩阵**：$\mathbf{q}_{\text{out}} = \mathbb{B}_{\text{imp},n}(s) \cdot \mathbf{q}_{\text{in}}$。  
 - **所需参数**：
   - 几何：$AR_{\text{imp}}$（面积-密度比）、$R_1/R_2$、$\tan\beta_2$、$\tan\beta_1$、$\tan\alpha_1$、$\lambda_{\text{imp}}$、$\tau_{\text{imp}}$  
-  - 背景流：$\overline{V}_{x1}, \overline{V}_{r2}, \overline{V}_{\theta1}, \overline{V}_{\theta2}$  
+  - 背景流：$\hat{\overline{v}}_{x1}, \hat{\overline{v}}_{r2}, \hat{\overline{v}}_{\theta1}, \hat{\overline{v}}_{\theta2}$  
   - 损失导数：$\left.\frac{d\hat{l}_{\text{imp}}^{ss}}{d\tan\beta_1}\right|_{\text{avg}}$
 ### 2.4 轴向静叶（`Axial Stator`）
 - **输入**：入口状态向量 $\mathbf{q}_{\text{in}} = [\delta\tilde V_{x1}, \delta\tilde V_{\theta1}, \delta\tilde P_1]^{\mathsf T}$。  
 - **输出**：出口状态向量 $\mathbf{q}_{\text{out}} = [\delta\tilde V_{x2}, \delta\tilde V_{\theta2}, \delta\tilde P_2]^{\mathsf T}$。  
 - **传递矩阵**：$\mathbf{q}_{\text{out}} = \mathbb{B}_{\text{sta},n}(s) \cdot \mathbf{q}_{\text{in}}$。  
-- **所需参数**：$\tan\alpha_2$、$\lambda_{\text{sta}}$、$\tau_S$、$\overline{V}_x, \overline{V}_{\theta1}, \overline{V}_{\theta2}, \tan\alpha_1$、损失导数 $\left.\frac{d\hat{l}_S^{ss}}{d\tan\alpha_1}\right|_{\text{avg}}$。
+- **所需参数**：$\tan\alpha_2$、$\lambda_{\text{sta}}$、$\tau_S$、$\hat{\overline{v}}_x, \hat{\overline{v}}_{\theta1}, \hat{\overline{v}}_{\theta2}, \tan\alpha_1$、损失导数 $\left.\frac{d\hat{l}_S^{ss}}{d\tan\alpha_1}\right|_{\text{avg}}$。
 ### 2.5 径向无叶空间（`Radial Vaneless Space`）
 - **输入**：入口状态向量 $\mathbf{q}_{\text{in}} = [\delta\tilde V_{r1}, \delta\tilde V_{\theta1}, \delta\tilde P_1]^{\mathsf T}$。  
 - **输出**：出口状态向量 $\mathbf{q}_{\text{out}} = [\delta\tilde V_{r2}, \delta\tilde V_{\theta2}, \delta\tilde P_2]^{\mathsf T}$。  
@@ -62,7 +62,7 @@ $$
 - **传递矩阵**：$\mathbf{q}_{\text{out}} = \mathbb{B}_{\text{dif},n}(s) \cdot \mathbf{q}_{\text{in}}$。  
 - **所需参数**：
   - 几何：$AR'_{\text{dif}}$（径向投影面积-密度比）、$\tan\alpha_2$、$\lambda_{\text{dif}}$、$\tau_{\text{dif}}$  
-  - 背景流：$\overline{V}_{r1}, \overline{V}_{\theta1}, \overline{V}_{r2}, \overline{V}_{\theta2}, \tan\alpha_1$  
+  - 背景流：$\hat{\overline{v}}_{r1}, \hat{\overline{v}}_{\theta1}, \hat{\overline{v}}_{r2}, \hat{\overline{v}}_{\theta2}, \tan\alpha_1$  
   - 损失导数：$\left.\frac{d\hat{l}_{\text{dif}}^{ss}}{d\tan\alpha_1}\right|_{\text{avg}}$
 ### 2.7 边界条件（`Boundary Conditions`）
 - **上游无限长管道**：  
@@ -71,11 +71,11 @@ $$
   $$  
   即 $B_n^{\text{up}} = 0,\ C_n^{\text{up}} = 0$。  
 - **下游集气室（$Plenum$）**：  
-  设出口管道长度为 $L$，背景速度 $\overline{V}_x, \overline{V}_\theta$，则  
+  设出口管道长度为 $L$，背景速度 $\hat{\overline{v}}_x, \hat{\overline{v}}_\theta$，则  
 $$
   \mathbf{EC} = \begin{bmatrix}
-  \left( -\frac{s}{n} - \overline{V}_x - j\overline{V}_\theta \right) e^{nL}, &
-  \left( \frac{s}{n} - \overline{V}_x + j\overline{V}_\theta \right) e^{-nL}, &
+  \left( -\frac{s}{n} - \hat{\overline{v}}_x - j\hat{\overline{v}}_\theta \right) e^{nL}, &
+  \left( \frac{s}{n} - \hat{\overline{v}}_x + j\hat{\overline{v}}_\theta \right) e^{-nL}, &
   0
   \end{bmatrix}
   $$
@@ -154,8 +154,8 @@ $$
   该条件等价于 $\mathbf{EC} \cdot \mathbf{c}^{\text{dn}} = 0$，其中
 $$
   \mathbf{EC} = \begin{bmatrix}
-  \left( -\frac{s}{n} - \overline{V}_x - j\overline{V}_\theta \right) e^{nL_{\text{dn}}}, &
-  \left( \frac{s}{n} - \overline{V}_x + j\overline{V}_\theta \right) e^{-nL_{\text{dn}}}, &
+  \left( -\frac{s}{n} - \hat{\overline{v}}_x - j\hat{\overline{v}}_\theta \right) e^{nL_{\text{dn}}}, &
+  \left( \frac{s}{n} - \hat{\overline{v}}_x + j\hat{\overline{v}}_\theta \right) e^{-nL_{\text{dn}}}, &
   0
   \end{bmatrix}
   $$
